@@ -282,7 +282,7 @@ def admin_dashboard(request):
         'user': request.user,
     }
     
-    return render(request, 'dashboards/admin_dashboard.html', context)
+    return render(request, 'dashboard/admin_dashboard.html', context)
 
 
 # API endpoints for dashboard data updates

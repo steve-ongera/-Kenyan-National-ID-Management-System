@@ -5,7 +5,7 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # path('', include('huduma.urls')),   
+    path('', include('huduma.urls')),   
 ]
 
 # Serve static & media files in development
