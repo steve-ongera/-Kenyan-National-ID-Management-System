@@ -106,7 +106,20 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+# ------------------------
+# Static files (CSS, JS, Images)
+# ------------------------
+STATIC_URL = '/static/'   # URL to access static files
+STATICFILES_DIRS = [      # extra places Django looks for static files
+    BASE_DIR / "static",
+]
+STATIC_ROOT = BASE_DIR / "staticfiles"  # collected static files for production (after collectstatic)
+
+# ------------------------
+# Media files (User uploads)
+# ------------------------
+MEDIA_URL = '/media/'     # URL to access uploaded files
+MEDIA_ROOT = BASE_DIR / "media"   # absolute path where uploads are stored
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
