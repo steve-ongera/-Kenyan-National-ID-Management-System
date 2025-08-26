@@ -68,8 +68,8 @@
 
     {% if request.user.user_type == 'admin' %}
         {% include "base/sidebars/admin_sidebar.html" %}
-    {% elif request.user.user_type == 'DOCTOR' %}
-        {% include "base/sidebars/doctor_sidebar.html" %}
+    {% elif request.user.user_type == 'huduma_staff' %}
+        {% include "base/sidebars/huduma_staff_sidebar.html" %}
     {% else %}
         {% include "base/sidebars/admin_sidebar.html" %}
     {% endif %}

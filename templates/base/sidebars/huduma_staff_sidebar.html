@@ -1,0 +1,205 @@
+{% load static %}
+<!-- ======= Huduma Staff Sidebar ======= -->
+<aside id="sidebar" class="sidebar">
+    <ul class="sidebar-nav" id="sidebar-nav">
+
+        <!-- Dashboard -->
+        <li class="nav-item">
+            <a class="nav-link" style="border-left: 3px solid #1a76d1;" href="#">
+                <i class="bi bi-speedometer2" style="color: #1a76d1;"></i>
+                <span>Huduma Dashboard</span>
+            </a>
+        </li>
+
+        <!-- Application Services -->
+        <li class="nav-item">
+            <a class="nav-link collapsed" data-bs-target="#applications-nav" data-bs-toggle="collapse" href="#">
+                <i class="bi bi-file-earmark-person" style="color: #2980b9;"></i>
+                <span>ID Applications</span>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul id="applications-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                <li><a href="#"><i class="bi bi-file-plus" style="color: #1a76d1;"></i> New Application</a></li>
+                <li><a href="#"><i class="bi bi-arrow-repeat" style="color: #1a76d1;"></i> ID Replacement</a></li>
+                <li><a href="#"><i class="bi bi-pencil-square" style="color: #1a76d1;"></i> Name Change</a></li>
+                <li><a href="#"><i class="bi bi-list-ul" style="color: #1a76d1;"></i> My Applications</a></li>
+                <li><a href="#"><i class="bi bi-hourglass-split" style="color: #1a76d1;"></i> Pending Applications</a></li>
+            </ul>
+        </li>
+
+        <!-- Citizen Services -->
+        <li class="nav-item">
+            <a class="nav-link collapsed" data-bs-target="#services-nav" data-bs-toggle="collapse" href="#">
+                <i class="bi bi-people" style="color: #2980b9;"></i>
+                <span>Citizen Services</span>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul id="services-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                <li><a href="#"><i class="bi bi-person-check" style="color: #1a76d1;"></i> Citizen Registration</a></li>
+                <li><a href="#"><i class="bi bi-card-checklist" style="color: #1a76d1;"></i> Application Assistance</a></li>
+                <li><a href="#"><i class="bi bi-info-circle" style="color: #1a76d1;"></i> Status Inquiry</a></li>
+                <li><a href="#"><i class="bi bi-question-circle" style="color: #1a76d1;"></i> Help & Support</a></li>
+            </ul>
+        </li>
+
+        <!-- Document Verification -->
+        <li class="nav-item">
+            <a class="nav-link collapsed" data-bs-target="#documents-nav" data-bs-toggle="collapse" href="#">
+                <i class="bi bi-shield-check" style="color: #2980b9;"></i>
+                <span>Document Verification</span>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul id="documents-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                <li><a href="#"><i class="bi bi-file-medical" style="color: #1a76d1;"></i> Birth Certificate Check</a></li>
+                <li><a href="#"><i class="bi bi-files" style="color: #1a76d1;"></i> Supporting Documents</a></li>
+                <li><a href="#"><i class="bi bi-upload" style="color: #1a76d1;"></i> Document Upload</a></li>
+                <li><a href="#"><i class="bi bi-check-square" style="color: #1a76d1;"></i> Verification Queue</a></li>
+            </ul>
+        </li>
+
+        <!-- Biometric Services -->
+        <li class="nav-item">
+            <a class="nav-link collapsed" data-bs-target="#biometric-nav" data-bs-toggle="collapse" href="#">
+                <i class="bi bi-fingerprint" style="color: #2980b9;"></i>
+                <span>Biometric Services</span>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul id="biometric-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                <li><a href="#"><i class="bi bi-calendar-check" style="color: #1a76d1;"></i> Schedule Biometrics</a></li>
+                <li><a href="#"><i class="bi bi-list-check" style="color: #1a76d1;"></i> Today's Appointments</a></li>
+                <li><a href="#"><i class="bi bi-camera" style="color: #1a76d1;"></i> Capture Biometrics</a></li>
+                <li><a href="#"><i class="bi bi-clock-history" style="color: #1a76d1;"></i> Biometric History</a></li>
+            </ul>
+        </li>
+
+        <!-- Payment Processing -->
+        <li class="nav-item">
+            <a class="nav-link collapsed" data-bs-target="#payments-nav" data-bs-toggle="collapse" href="#">
+                <i class="bi bi-credit-card" style="color: #2980b9;"></i>
+                <span>Payment Processing</span>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul id="payments-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                <li><a href="#"><i class="bi bi-cash-coin" style="color: #1a76d1;"></i> Fee Collection</a></li>
+                <li><a href="#"><i class="bi bi-receipt" style="color: #1a76d1;"></i> Payment Receipts</a></li>
+                <li><a href="#"><i class="bi bi-phone" style="color: #1a76d1;"></i> M-Pesa Payments</a></li>
+                <li><a href="#"><i class="bi bi-list-ol" style="color: #1a76d1;"></i> Payment History</a></li>
+            </ul>
+        </li>
+
+        <!-- ID Collection -->
+        <li class="nav-item">
+            <a class="nav-link collapsed" data-bs-target="#collection-nav" data-bs-toggle="collapse" href="#">
+                <i class="bi bi-hand-index" style="color: #2980b9;"></i>
+                <span>ID Collection</span>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul id="collection-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                <li><a href="#"><i class="bi bi-check-circle" style="color: #1a76d1;"></i> Ready for Collection</a></li>
+                <li><a href="#"><i class="bi bi-person-check" style="color: #1a76d1;"></i> ID Distribution</a></li>
+                <li><a href="#"><i class="bi bi-receipt" style="color: #1a76d1;"></i> Waiting Cards</a></li>
+                <li><a href="#"><i class="bi bi-journal-check" style="color: #1a76d1;"></i> Collection Log</a></li>
+            </ul>
+        </li>
+
+        <!-- Queue Management -->
+        <li class="nav-item">
+            <a class="nav-link collapsed" data-bs-target="#queue-nav" data-bs-toggle="collapse" href="#">
+                <i class="bi bi-people-fill" style="color: #2980b9;"></i>
+                <span>Queue Management</span>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul id="queue-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                <li><a href="#"><i class="bi bi-ticket-perforated" style="color: #1a76d1;"></i> Issue Queue Number</a></li>
+                <li><a href="#"><i class="bi bi-arrow-right-circle" style="color: #1a76d1;"></i> Call Next Citizen</a></li>
+                <li><a href="#"><i class="bi bi-list-task" style="color: #1a76d1;"></i> Current Queue</a></li>
+                <li><a href="#"><i class="bi bi-clock" style="color: #1a76d1;"></i> Service Times</a></li>
+            </ul>
+        </li>
+
+        <!-- Reports & Statistics -->
+        <li class="nav-item">
+            <a class="nav-link collapsed" data-bs-target="#reports-nav" data-bs-toggle="collapse" href="#">
+                <i class="bi bi-bar-chart" style="color: #2980b9;"></i>
+                <span>Reports & Statistics</span>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul id="reports-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                <li><a href="#"><i class="bi bi-calendar-day" style="color: #1a76d1;"></i> Daily Summary</a></li>
+                <li><a href="#"><i class="bi bi-graph-up" style="color: #1a76d1;"></i> Service Statistics</a></li>
+                <li><a href="#"><i class="bi bi-clipboard-data" style="color: #1a76d1;"></i> Performance Report</a></li>
+                <li><a href="#"><i class="bi bi-file-earmark-bar-graph" style="color: #1a76d1;"></i> Monthly Reports</a></li>
+            </ul>
+        </li>
+
+        <!-- System Tools -->
+        <li class="nav-heading">System Tools</li>
+
+        <li class="nav-item">
+            <a class="nav-link collapsed" data-bs-target="#tools-nav" data-bs-toggle="collapse" href="#">
+                <i class="bi bi-tools" style="color: #2980b9;"></i>
+                <span>Verification Tools</span>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul id="tools-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                <li><a href="#"><i class="bi bi-search" style="color: #1a76d1;"></i> Application Search</a></li>
+                <li><a href="#"><i class="bi bi-qr-code-scan" style="color: #1a76d1;"></i> QR Code Scanner</a></li>
+                <li><a href="#"><i class="bi bi-shield-check" style="color: #1a76d1;"></i> Document Authenticator</a></li>
+                <li><a href="#"><i class="bi bi-database-check" style="color: #1a76d1;"></i> Database Lookup</a></li>
+            </ul>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link collapsed" href="#">
+                <i class="bi bi-bell" style="color: #2980b9;"></i>
+                <span>Notifications</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link collapsed" href="#">
+                <i class="bi bi-person-circle" style="color: #2980b9;"></i>
+                <span>My Profile</span>
+            </a>
+        </li>
+
+        <!-- Quick Actions -->
+        <li class="nav-heading">Quick Actions</li>
+
+        <li class="nav-item">
+            <a class="nav-link collapsed" href="#">
+                <i class="bi bi-plus-circle-fill" style="color: #28a745;"></i>
+                <span>Quick Application</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link collapsed" href="#">
+                <i class="bi bi-camera-fill" style="color: #17a2b8;"></i>
+                <span>Quick Biometric</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link collapsed" href="#">
+                <i class="bi bi-printer-fill" style="color: #ffc107;"></i>
+                <span>Print Reports</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link collapsed" href="#">
+                <i class="bi bi-question-circle-fill" style="color: #6c757d;"></i>
+                <span>Help Center</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link collapsed" href="#">
+                <i class="bi bi-box-arrow-right" style="color: #e74c3c;"></i>
+                <span>Logout</span>
+            </a>
+        </li>
+
+    </ul>
+</aside>
