@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+venv/
+env/
+ENV/
+.venv/
+
+# Django stuff
+*.log
+*.pot
+*.pyc
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+local_settings.py
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Pipenv
+Pipfile.lock
+
+# Pytest
+.pytest_cache/
+
+# Coverage
+htmlcov/
+.coverage
+*.cover
+*.py,cover
+
+# Migrations (optional — usually you keep these)
+# */migrations/
+# !*/migrations/__init__.py
