@@ -1,156 +1,251 @@
 {% load static %}
-<!-- ======= Clinic Management Sidebar ======= -->
-<aside id="sidebar"  class="sidebar">
+<!-- ======= ID Application Management Sidebar ======= -->
+<aside id="sidebar" class="sidebar">
     <ul class="sidebar-nav" id="sidebar-nav">
 
         <!-- Dashboard -->
         <li class="nav-item">
-            <a class="nav-link" style="border-left: 3px solid #1a76d1;" href="{% url 'admin_dashboard'%}">
+            <a class="nav-link" style="border-left: 3px solid #1a76d1;" href="#">
                 <i class="bi bi-speedometer2" style="color: #1a76d1;"></i>
-                <span >Clinic Dashboard</span>
+                <span>Admin Dashboard</span>
             </a>
         </li>
 
-        <!-- Patient Management -->
+        <!-- ID Applications Management -->
         <li class="nav-item">
-            <a class="nav-link collapsed" data-bs-target="#patients-nav" data-bs-toggle="collapse" href="#">
-                <i class="bi bi-people-fill" style="color: #2980b9;"></i>
-                <span >Patient Management</span>
+            <a class="nav-link collapsed" data-bs-target="#applications-nav" data-bs-toggle="collapse" href="#">
+                <i class="bi bi-file-earmark-person" style="color: #2980b9;"></i>
+                <span>ID Applications</span>
                 <i class="bi bi-chevron-down ms-auto"></i>
             </a>
-            <ul id="patients-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                <li><a href="{% url 'patients-list'%}"><i class="bi bi-person-vcard" style="color: #1a76d1;"></i> Patient Records</a></li>
-                <li><a href="{% url 'patients-create'%}"><i class="bi bi-person-plus" style="color: #1a76d1;"></i> New Registration</a></li>
-                <li><a href="{% url 'all_medical_records'%}"><i class="bi bi-file-medical" style="color: #1a76d1;"></i> Medical History</a></li>
-                
+            <ul id="applications-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                <li><a href="#"><i class="bi bi-list-ul" style="color: #1a76d1;"></i> All Applications</a></li>
+                <li><a href="#"><i class="bi bi-file-plus" style="color: #1a76d1;"></i> New Applications</a></li>
+                <li><a href="#"><i class="bi bi-arrow-repeat" style="color: #1a76d1;"></i> Replacement Requests</a></li>
+                <li><a href="#"><i class="bi bi-pencil-square" style="color: #1a76d1;"></i> Name Change Requests</a></li>
+                <li><a href="#"><i class="bi bi-hourglass-split" style="color: #1a76d1;"></i> Pending Review</a></li>
+                <li><a href="#"><i class="bi bi-check-circle" style="color: #1a76d1;"></i> Approved Applications</a></li>
             </ul>
         </li>
 
-        <!-- Appointments -->
+        <!-- Birth Certificate Management -->
         <li class="nav-item">
-            <a class="nav-link collapsed" data-bs-target="#appointments-nav" data-bs-toggle="collapse" href="#">
-                <i class="bi bi-calendar-check" style="color: #2980b9;"></i>
-                <span >Appointments</span>
+            <a class="nav-link collapsed" data-bs-target="#birth-certs-nav" data-bs-toggle="collapse" href="#">
+                <i class="bi bi-file-medical" style="color: #2980b9;"></i>
+                <span>Birth Certificates</span>
                 <i class="bi bi-chevron-down ms-auto"></i>
             </a>
-            <ul id="appointments-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                
-                <li><a href="{% url 'doctor_calendar_view'%}"><i class="bi bi-calendar-week" style="color: #1a76d1;"></i> Calendar View</a></li>
-                <li><a href="{% url 'appointment_list'%}"><i class="bi bi-hourglass" style="color: #1a76d1;"></i> Waiting List</a></li>
+            <ul id="birth-certs-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                <li><a href="#"><i class="bi bi-database" style="color: #1a76d1;"></i> Certificate Database</a></li>
+                <li><a href="#"><i class="bi bi-plus-circle" style="color: #1a76d1;"></i> Register New Certificate</a></li>
+                <li><a href="#"><i class="bi bi-search" style="color: #1a76d1;"></i> Verify Certificates</a></li>
+                <li><a href="#"><i class="bi bi-exclamation-triangle" style="color: #1a76d1;"></i> Flagged Certificates</a></li>
             </ul>
         </li>
 
-        <!-- Medical Services -->
+        <!-- Biometric Services -->
         <li class="nav-item">
-            <a class="nav-link collapsed" data-bs-target="#services-nav" data-bs-toggle="collapse" href="#">
-                <i class="bi bi-heart-pulse" style="color: #2980b9;"></i>
-                <span >Medical Services</span>
+            <a class="nav-link collapsed" data-bs-target="#biometric-nav" data-bs-toggle="collapse" href="#">
+                <i class="bi bi-fingerprint" style="color: #2980b9;"></i>
+                <span>Biometric Services</span>
                 <i class="bi bi-chevron-down ms-auto"></i>
             </a>
-            <ul id="services-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                <li><a href="{% url 'new_consultation'%}"><i class="bi bi-clipboard2-pulse" style="color: #1a76d1;"></i>Add  Consultations</a></li>
-                <li><a href="{% url 'consultation_list'%}"><i class="bi bi-file-earmark-medical" style="color: #1a76d1;"></i> consultation records</a></li>
-             
+            <ul id="biometric-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                <li><a href="#"><i class="bi bi-calendar-check" style="color: #1a76d1;"></i> Biometric Appointments</a></li>
+                <li><a href="#"><i class="bi bi-camera" style="color: #1a76d1;"></i> Data Capture</a></li>
+                <li><a href="#"><i class="bi bi-shield-check" style="color: #1a76d1;"></i> Biometric Verification</a></li>
+                <li><a href="#"><i class="bi bi-clock-history" style="color: #1a76d1;"></i> Capture History</a></li>
             </ul>
         </li>
 
-        <!-- Pharmacy -->
+        <!-- Document Management -->
         <li class="nav-item">
-            <a class="nav-link collapsed" data-bs-target="#pharmacy-nav" data-bs-toggle="collapse" href="#">
-                <i class="bi bi-capsule" style="color: #2980b9;"></i>
-                <span >Pharmacy</span>
+            <a class="nav-link collapsed" data-bs-target="#documents-nav" data-bs-toggle="collapse" href="#">
+                <i class="bi bi-folder2-open" style="color: #2980b9;"></i>
+                <span>Document Management</span>
                 <i class="bi bi-chevron-down ms-auto"></i>
             </a>
-            <ul id="pharmacy-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                <li><a href="{% url 'medicine-list'%}"><i class="bi bi-capsule" style="color: #1a76d1;"></i> Medicine Inventory</a></li>
-                <li><a href="{% url 'medicine_sales_list'%}"><i class="bi bi-cash-stack" style="color: #1a76d1;"></i> Pharmacy Sales</a></li>
-                <li><a href="{% url 'medicine_stock_list'%}"><i class="bi bi-exclamation-triangle" style="color: #1a76d1;"></i> Low Stock Alerts</a></li>
-                <li><a href="{% url 'medicine_category_list'%}"><i class="bi bi-tags" style="color: #1a76d1;"></i> Medicine Categories</a></li>
+            <ul id="documents-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                <li><a href="#"><i class="bi bi-files" style="color: #1a76d1;"></i> All Documents</a></li>
+                <li><a href="#"><i class="bi bi-tags" style="color: #1a76d1;"></i> Document Types</a></li>
+                <li><a href="#"><i class="bi bi-check2-square" style="color: #1a76d1;"></i> Verification Queue</a></li>
+                <li><a href="#"><i class="bi bi-upload" style="color: #1a76d1;"></i> Bulk Upload</a></li>
             </ul>
         </li>
 
-        <!-- Billing -->
+        <!-- National ID Management -->
         <li class="nav-item">
-            <a class="nav-link collapsed" data-bs-target="#billing-nav" data-bs-toggle="collapse" href="#">
+            <a class="nav-link collapsed" data-bs-target="#national-id-nav" data-bs-toggle="collapse" href="#">
+                <i class="bi bi-credit-card" style="color: #2980b9;"></i>
+                <span>National IDs</span>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul id="national-id-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                <li><a href="#"><i class="bi bi-list-check" style="color: #1a76d1;"></i> Issued IDs</a></li>
+                <li><a href="#"><i class="bi bi-printer" style="color: #1a76d1;"></i> Print Queue</a></li>
+                <li><a href="#"><i class="bi bi-truck" style="color: #1a76d1;"></i> Dispatch Tracking</a></li>
+                <li><a href="#"><i class="bi bi-hand-index" style="color: #1a76d1;"></i> Ready for Collection</a></li>
+                <li><a href="#"><i class="bi bi-check-square" style="color: #1a76d1;"></i> Collected IDs</a></li>
+                <li><a href="#"><i class="bi bi-receipt" style="color: #1a76d1;"></i> Waiting Cards</a></li>
+            </ul>
+        </li>
+
+        <!-- Administrative Offices -->
+        <li class="nav-item">
+            <a class="nav-link collapsed" data-bs-target="#offices-nav" data-bs-toggle="collapse" href="#">
+                <i class="bi bi-building" style="color: #2980b9;"></i>
+                <span>Administrative Offices</span>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul id="offices-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                <li><a href="#"><i class="bi bi-house-door" style="color: #1a76d1;"></i> Chief Offices</a></li>
+                <li><a href="#"><i class="bi bi-bank" style="color: #1a76d1;"></i> DO Offices</a></li>
+                <li><a href="#"><i class="bi bi-shop" style="color: #1a76d1;"></i> Huduma Centres</a></li>
+                <li><a href="#"><i class="bi bi-person-badge-fill" style="color: #1a76d1;"></i> Chiefs</a></li>
+                <li><a href="#"><i class="bi bi-person-workspace" style="color: #1a76d1;"></i> DO Officers</a></li>
+                <li><a href="#"><i class="bi bi-people" style="color: #1a76d1;"></i> Staff Management</a></li>
+            </ul>
+        </li>
+
+        <!-- Fee Management -->
+        <li class="nav-item">
+            <a class="nav-link collapsed" data-bs-target="#fees-nav" data-bs-toggle="collapse" href="#">
                 <i class="bi bi-cash-coin" style="color: #2980b9;"></i>
-                <span >Billing & Payments</span>
+                <span>Fee Management</span>
                 <i class="bi bi-chevron-down ms-auto"></i>
             </a>
-            <ul id="billing-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                <li><a href="{% url 'create_sale_from_consultation'%}"><i class="bi bi-receipt" style="color: #1a76d1;"></i> Record Payment</a></li>
-                <li><a href="{% url 'medicine_sales_list'%}"><i class="bi bi-credit-card" style="color: #1a76d1;"></i> Payments</a></li>
-                <li><a href="{% url 'otc_sale_list'%}"><i class="bi bi-credit-card" style="color: #1a76d1;"></i> OTC Sales</a></li>
-              
+            <ul id="fees-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                <li><a href="#"><i class="bi bi-currency-dollar" style="color: #1a76d1;"></i> Fee Structure</a></li>
+                <li><a href="#"><i class="bi bi-credit-card" style="color: #1a76d1;"></i> Payment Records</a></li>
+                <li><a href="#"><i class="bi bi-receipt" style="color: #1a76d1;"></i> Payment Verification</a></li>
+                <li><a href="#"><i class="bi bi-graph-up" style="color: #1a76d1;"></i> Revenue Reports</a></li>
             </ul>
         </li>
 
-        <!-- Staff Management -->
+        <!-- Location Management -->
         <li class="nav-item">
-            <a class="nav-link collapsed" data-bs-target="#staff-nav" data-bs-toggle="collapse" href="#">
-                <i class="bi bi-person-badge" style="color: #2980b9;"></i>
-                <span >Staff Management</span>
+            <a class="nav-link collapsed" data-bs-target="#locations-nav" data-bs-toggle="collapse" href="#">
+                <i class="bi bi-geo-alt" style="color: #2980b9;"></i>
+                <span>Location Management</span>
                 <i class="bi bi-chevron-down ms-auto"></i>
             </a>
-            <ul id="staff-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                <li><a href="{% url 'doctor_list'%}"><i class="bi bi-person-hearts" style="color: #1a76d1;"></i> Doctors</a></li>
-               
+            <ul id="locations-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                <li><a href="#"><i class="bi bi-map" style="color: #1a76d1;"></i> Counties</a></li>
+                <li><a href="#"><i class="bi bi-pin-map" style="color: #1a76d1;"></i> Sub-Counties</a></li>
+                <li><a href="#"><i class="bi bi-compass" style="color: #1a76d1;"></i> Divisions</a></li>
+                <li><a href="#"><i class="bi bi-signpost" style="color: #1a76d1;"></i> Locations</a></li>
+                <li><a href="#"><i class="bi bi-geo" style="color: #1a76d1;"></i> Sub-Locations</a></li>
+                <li><a href="#"><i class="bi bi-house" style="color: #1a76d1;"></i> Villages</a></li>
             </ul>
         </li>
 
-        <!-- Reports -->
+        <!-- Reports & Analytics -->
         <li class="nav-item">
             <a class="nav-link collapsed" data-bs-target="#reports-nav" data-bs-toggle="collapse" href="#">
                 <i class="bi bi-clipboard-data" style="color: #2980b9;"></i>
-                <span >Reports</span>
+                <span>Reports & Analytics</span>
                 <i class="bi bi-chevron-down ms-auto"></i>
             </a>
             <ul id="reports-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                <li><a href="{% url 'clinical_reports'%}"><i class="bi bi-file-earmark-medical" style="color: #1a76d1;"></i> Clinical Reports</a></li>
-                <li><a href="{% url 'financial_reports'%}"><i class="bi bi-graph-up" style="color: #1a76d1;"></i> Financial Reports</a></li>
-                <li><a href="{% url 'inventory_reports'%}"><i class="bi bi-box-seam" style="color: #1a76d1;"></i> Inventory Reports</a></li>
+                <li><a href="#"><i class="bi bi-graph-up-arrow" style="color: #1a76d1;"></i> Application Statistics</a></li>
+                <li><a href="#"><i class="bi bi-clock" style="color: #1a76d1;"></i> Processing Time Reports</a></li>
+                <li><a href="#"><i class="bi bi-bar-chart" style="color: #1a76d1;"></i> Performance Metrics</a></li>
+                <li><a href="#"><i class="bi bi-calendar-range" style="color: #1a76d1;"></i> Daily Summary</a></li>
+                <li><a href="#"><i class="bi bi-file-earmark-bar-graph" style="color: #1a76d1;"></i> Custom Reports</a></li>
+                <li><a href="#"><i class="bi bi-download" style="color: #1a76d1;"></i> Export Data</a></li>
             </ul>
         </li>
 
-        <!-- System Admin -->
-        <li class="nav-heading" >System Administration</li>
+        <!-- Notifications -->
+        <li class="nav-item">
+            <a class="nav-link collapsed" data-bs-target="#notifications-nav" data-bs-toggle="collapse" href="#">
+                <i class="bi bi-bell" style="color: #2980b9;"></i>
+                <span>Notifications</span>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul id="notifications-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                <li><a href="#"><i class="bi bi-envelope" style="color: #1a76d1;"></i> Notification Templates</a></li>
+                <li><a href="#"><i class="bi bi-chat-square-text" style="color: #1a76d1;"></i> SMS Notifications</a></li>
+                <li><a href="#"><i class="bi bi-envelope-at" style="color: #1a76d1;"></i> Email Notifications</a></li>
+                <li><a href="#"><i class="bi bi-list-task" style="color: #1a76d1;"></i> Notification Queue</a></li>
+                <li><a href="#"><i class="bi bi-check-circle" style="color: #1a76d1;"></i> Delivery Status</a></li>
+            </ul>
+        </li>
+
+        <!-- System Administration -->
+        <li class="nav-heading">System Administration</li>
 
         <li class="nav-item">
-            <a class="nav-link collapsed" href="{% url 'user_management'%}">
-                <i class="bi bi-shield-lock" style="color: #2980b9;"></i>
-                <span >User Management</span>
+            <a class="nav-link collapsed" data-bs-target="#users-nav" data-bs-toggle="collapse" href="#">
+                <i class="bi bi-people-fill" style="color: #2980b9;"></i>
+                <span>User Management</span>
+                <i class="bi bi-chevron-down ms-auto"></i>
             </a>
+            <ul id="users-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                <li><a href="#"><i class="bi bi-person-lines-fill" style="color: #1a76d1;"></i> All Users</a></li>
+                <li><a href="#"><i class="bi bi-person-plus" style="color: #1a76d1;"></i> Add New User</a></li>
+                <li><a href="#"><i class="bi bi-shield-lock" style="color: #1a76d1;"></i> User Roles</a></li>
+                <li><a href="#"><i class="bi bi-key" style="color: #1a76d1;"></i> Password Management</a></li>
+                <li><a href="#"><i class="bi bi-person-check" style="color: #1a76d1;"></i> User Verification</a></li>
+            </ul>
         </li>
 
         <li class="nav-item">
-            <a class="nav-link collapsed" href="{% url 'clinic_settings'%}">
+            <a class="nav-link collapsed" data-bs-target="#security-nav" data-bs-toggle="collapse" href="#">
+                <i class="bi bi-shield-check" style="color: #2980b9;"></i>
+                <span>Security & Audit</span>
+                <i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul id="security-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+                <li><a href="#"><i class="bi bi-journal-text" style="color: #1a76d1;"></i> Audit Logs</a></li>
+                <li><a href="#"><i class="bi bi-exclamation-triangle-fill" style="color: #1a76d1;"></i> Security Incidents</a></li>
+                <li><a href="#"><i class="bi bi-activity" style="color: #1a76d1;"></i> User Activity</a></li>
+                <li><a href="#"><i class="bi bi-eye" style="color: #1a76d1;"></i> Access Monitoring</a></li>
+            </ul>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link collapsed" href="#">
                 <i class="bi bi-gear" style="color: #2980b9;"></i>
-                <span >Clinic Settings</span>
+                <span>System Settings</span>
             </a>
         </li>
 
         <li class="nav-item">
-            <a class="nav-link collapsed" href="{% url 'user_manual'%}">
-                <i class="bi bi-journal-text" style="color: #2980b9;"></i>
-                <span >User Manual</span>
+            <a class="nav-link collapsed" href="#">
+                <i class="bi bi-journal-bookmark" style="color: #2980b9;"></i>
+                <span>System Manual</span>
             </a>
         </li>
 
         <!-- Quick Actions -->
         <li class="nav-heading">Quick Actions</li>
 
-        
-
         <li class="nav-item">
-            <a class="nav-link collapsed" href="{% url 'chat_home'%}">
-                <i class="bi bi-bell"></i>
-                <span>Call Next Patient</span>
+            <a class="nav-link collapsed" href="#">
+                <i class="bi bi-search" style="color: #2980b9;"></i>
+                <span>Search Applications</span>
             </a>
         </li>
 
         <li class="nav-item">
-            <a class="nav-link collapsed" href="{% url 'logout'%}">
+            <a class="nav-link collapsed" href="#">
+                <i class="bi bi-qr-code-scan" style="color: #2980b9;"></i>
+                <span>QR Code Verifier</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link collapsed" href="#">
+                <i class="bi bi-card-checklist" style="color: #2980b9;"></i>
+                <span>Bulk Actions</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link collapsed" href="#">
                 <i class="bi bi-box-arrow-right" style="color: #e74c3c;"></i>
-                <span >Logout</span>
+                <span>Logout</span>
             </a>
         </li>
 

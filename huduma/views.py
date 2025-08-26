@@ -87,7 +87,6 @@ def dashboard_redirect(request):
     else:  # mwananchi
         return redirect('citizen_dashboard')
 
-
 @login_required
 def admin_dashboard(request):
     """Admin dashboard with comprehensive statistics and charts"""
@@ -199,16 +198,16 @@ def admin_dashboard(request):
         revenue_data.append(float(revenue))
         revenue_labels.append(date.strftime('%m/%d'))
     
-    # Processing Time Analysis
-    completed_apps = IDApplication.objects.filter(
-        status='collected',
-        created_at__gte=last_30_days
+    # Processing Time Analysis - FIXED: Use NationalID.collected_at instead of IDApplication.collected_at
+    completed_ids = NationalID.objects.select_related('application').filter(
+        is_collected=True,
+        collected_at__gte=timezone.now() - timedelta(days=30)
     )
     
     processing_times = []
-    for app in completed_apps:
-        if app.collected_at:
-            days = (app.collected_at.date() - app.created_at.date()).days
+    for national_id in completed_ids:
+        if national_id.collected_at and national_id.application.created_at:
+            days = (national_id.collected_at.date() - national_id.application.created_at.date()).days
             processing_times.append(days)
     
     avg_processing_time = sum(processing_times) / len(processing_times) if processing_times else 0
@@ -281,9 +280,8 @@ def admin_dashboard(request):
         # User info
         'user': request.user,
     }
-    
-    return render(request, 'dashboard/admin_dashboard.html', context)
 
+    return render(request, 'dashboard/admin_dashboard.html', context)
 
 # API endpoints for dashboard data updates
 @login_required
