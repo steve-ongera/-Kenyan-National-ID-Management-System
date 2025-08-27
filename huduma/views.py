@@ -413,7 +413,8 @@ import json
 from .models import (
     IDApplication, CustomUser, BirthCertificate, County, SubCounty, 
     Division, Location, SubLocation, Village, ChiefOffice, DOOffice,
-    HudumaCentre, DocumentType, Document, ApplicationDocument
+    HudumaCentre, DocumentType, Document, ApplicationDocument,
+    ApplicationStatusHistory
 )
 
 
@@ -596,8 +597,18 @@ def id_application_create(request):
                 name_change_reason=request.POST.get('name_change_reason'),
             )
             
+            # Create status history entry
+            ApplicationStatusHistory.objects.create(
+                application=application,
+                previous_status=None,
+                new_status='started',
+                changed_by=request.user,
+                change_reason='Application created',
+                location_type='online'
+            )
+            
             messages.success(request, f'ID Application {application.application_number} created successfully!')
-            return redirect('id_applications:detail', application_id=application.application_id)
+            return redirect('applications_detail', application_id=application.application_id)
             
         except Exception as e:
             messages.error(request, f'Error creating application: {str(e)}')
@@ -624,6 +635,13 @@ def id_application_update(request, application_id):
     
     if request.method == 'POST':
         try:
+            # Store original values for change tracking
+            original_data = {
+                'full_name': application.full_name,
+                'phone_number': application.phone_number,
+                'email': application.email,
+            }
+            
             # Update application fields
             application.full_name = request.POST.get('full_name')
             application.phone_number = request.POST.get('phone_number')
@@ -651,63 +669,88 @@ def id_application_update(request, application_id):
             
             application.save()
             
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': True,
-                    'message': 'Application updated successfully!'
-                })
-            else:
-                messages.success(request, 'Application updated successfully!')
-                return redirect('id_applications:detail', application_id=application.application_id)
+            # Create status history entry for update
+            changes = []
+            if original_data['full_name'] != application.full_name:
+                changes.append(f"Name changed from '{original_data['full_name']}' to '{application.full_name}'")
+            if original_data['phone_number'] != application.phone_number:
+                changes.append(f"Phone changed from '{original_data['phone_number']}' to '{application.phone_number}'")
+            if original_data['email'] != application.email:
+                changes.append(f"Email changed from '{original_data['email']}' to '{application.email}'")
+            
+            if changes:
+                ApplicationStatusHistory.objects.create(
+                    application=application,
+                    previous_status=application.status,
+                    new_status=application.status,
+                    changed_by=request.user,
+                    change_reason='Application updated',
+                    notes='; '.join(changes),
+                    location_type='online'
+                )
+            
+            messages.success(request, 'Application updated successfully!')
+            return redirect('applications_detail', application_id=application.application_id)
                 
         except Exception as e:
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': False,
-                    'message': f'Error updating application: {str(e)}'
-                })
-            else:
-                messages.error(request, f'Error updating application: {str(e)}')
+            messages.error(request, f'Error updating application: {str(e)}')
     
     # Get data for form dropdowns
     counties = County.objects.all().order_by('name')
+    sub_counties = SubCounty.objects.filter(county=application.current_county).order_by('name') if application.current_county else []
+    divisions = Division.objects.filter(sub_county=application.current_sub_county).order_by('name') if application.current_sub_county else []
+    locations = Location.objects.filter(division=application.current_division).order_by('name') if application.current_division else []
+    sub_locations = SubLocation.objects.filter(location=application.current_location).order_by('name') if application.current_location else []
+    villages = Village.objects.filter(sub_location=application.current_sub_location).order_by('name') if application.current_sub_location else []
     
     context = {
         'application': application,
         'counties': counties,
+        'sub_counties': sub_counties,
+        'divisions': divisions,
+        'locations': locations,
+        'sub_locations': sub_locations,
+        'villages': villages,
     }
     
     return render(request, 'id_applications/update.html', context)
 
 
 @login_required
-@require_http_methods(["POST"])
+@require_http_methods(["GET", "POST"])
 def id_application_delete(request, application_id):
     """Delete an ID application"""
     application = get_object_or_404(IDApplication, application_id=application_id)
     
-    try:
-        app_number = application.application_number
-        application.delete()
-        
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': True,
-                'message': f'Application {app_number} deleted successfully!'
-            })
-        else:
-            messages.success(request, f'Application {app_number} deleted successfully!')
-            return redirect('id_applications:list')
+    if request.method == 'POST':
+        try:
+            app_number = application.application_number
+            app_name = application.full_name
             
-    except Exception as e:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': False,
-                'message': f'Error deleting application: {str(e)}'
-            })
-        else:
+            # Create final status history entry
+            ApplicationStatusHistory.objects.create(
+                application=application,
+                previous_status=application.status,
+                new_status='cancelled',
+                changed_by=request.user,
+                change_reason='Application deleted by user',
+                location_type='online'
+            )
+            
+            application.delete()
+            messages.success(request, f'Application {app_number} for {app_name} has been deleted successfully!')
+            return redirect('applications_list')
+                
+        except Exception as e:
             messages.error(request, f'Error deleting application: {str(e)}')
-            return redirect('id_applications:detail', application_id=application_id)
+            return redirect('applications_detail', application_id=application_id)
+    
+    # GET request - show confirmation page
+    context = {
+        'application': application,
+    }
+    
+    return render(request, 'id_applications/delete.html', context)
 
 
 @login_required
@@ -788,7 +831,7 @@ def id_application_api_detail(request, application_id):
         }, status=500)
 
 
-# Location API endpoints for cascading dropdowns
+# Location API endpoints for cascading dropdowns (keep these as AJAX)
 @login_required
 def get_sub_counties(request, county_id):
     """Get sub-counties for a given county"""
