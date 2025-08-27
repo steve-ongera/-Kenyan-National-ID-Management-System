@@ -4,6 +4,15 @@
 {% block title %}Admin Dashboard - Huduma ID Management System{% endblock %}
 
 {% block content %}
+<div class="message-container" id="system-messages">
+    {% for message in messages %}
+    <div class="alert-message alert-{{ message.tags }}">
+        {{ message }}
+        <span class="close-message">&times;</span>
+    </div>
+    {% endfor %}
+  </div>
+  
 <div class="container-fluid">
     <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">

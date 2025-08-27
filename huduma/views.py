@@ -215,7 +215,7 @@ def admin_dashboard(request):
     # Recent Activities
     recent_applications = IDApplication.objects.select_related(
         'applicant', 'current_county'
-    ).order_by('-created_at')[:10]
+    ).order_by('-created_at')[:4]
     
     recent_status_changes = ApplicationStatusHistory.objects.select_related(
         'application', 'changed_by'
