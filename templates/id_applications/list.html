@@ -1,0 +1,676 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}ID Applications - National ID Management System{% endblock %}
+
+{% block content %}
+<div class="message-container" id="system-messages">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+        <i class="bi {% if message.tags == 'success' %}bi-check-circle{% else %}bi-exclamation-triangle{% endif %} me-2"></i>
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="pagetitle">
+    <h1><i class="bi bi-card-list me-2"></i>ID Applications</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="#"><i class="bi bi-house-door"></i> Home</a></li>
+            <li class="breadcrumb-item active">ID Applications</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section">
+    <div class="row">
+        <div class="col-lg-12">
+            <!-- Filters Card -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="bi bi-funnel me-2"></i>Search & Filters</h6>
+                </div>
+                <div class="card-body">
+                    <form method="GET" id="filterForm">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label for="search" class="form-label">Search</label>
+                                <input type="text" name="search" id="search" class="form-control" 
+                                       placeholder="Application number, name, phone..." 
+                                       value="{{ search_query }}">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="status" class="form-label">Status</label>
+                                <select name="status" id="status" class="form-select">
+                                    <option value="">All Statuses</option>
+                                    {% for code, display in status_choices %}
+                                    <option value="{{ code }}" {% if code == status_filter %}selected{% endif %}>
+                                        {{ display }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="type" class="form-label">Type</label>
+                                <select name="type" id="type" class="form-select">
+                                    <option value="">All Types</option>
+                                    {% for code, display in type_choices %}
+                                    <option value="{{ code }}" {% if code == type_filter %}selected{% endif %}>
+                                        {{ display }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="entry" class="form-label">Entry Point</label>
+                                <select name="entry" id="entry" class="form-select">
+                                    <option value="">All Entry Points</option>
+                                    {% for code, display in entry_choices %}
+                                    <option value="{{ code }}" {% if code == entry_filter %}selected{% endif %}>
+                                        {{ display }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="county" class="form-label">County</label>
+                                <select name="county" id="county" class="form-select">
+                                    <option value="">All Counties</option>
+                                    {% for county in counties %}
+                                    <option value="{{ county.id }}" {% if county.id|stringformat:"s" == county_filter %}selected{% endif %}>
+                                        {{ county.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="date_from" class="form-label">From Date</label>
+                                <input type="date" name="date_from" id="date_from" class="form-control" value="{{ date_from }}">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="date_to" class="form-label">To Date</label>
+                                <input type="date" name="date_to" id="date_to" class="form-control" value="{{ date_to }}">
+                            </div>
+                            <div class="col-md-8 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary me-2">
+                                    <i class="bi bi-search me-1"></i>Filter
+                                </button>
+                                <a href="{% url 'applications_list' %}" class="btn btn-outline-secondary me-2">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>Clear
+                                </a>
+                                <button type="button" class="btn btn-success" data-bs-toggle="collapse" data-bs-target="#bulkActions">
+                                    <i class="bi bi-check2-all me-1"></i>Bulk Actions
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Applications Table Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0"><i class="bi bi-list-ul me-2"></i>All Applications</h5>
+                        <a href="{% url 'applications_create' %}" class="btn btn-light">
+                            <i class="bi bi-plus-circle me-2"></i>New Application
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th><input type="checkbox" id="selectAll"></th>
+                                    <th>Application #</th>
+                                    <th>Applicant</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Entry Point</th>
+                                    <th>County</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for application in applications %}
+                                <tr>
+                                    <td><input type="checkbox" class="row-checkbox" value="{{ application.application_id }}"></td>
+                                    <td>
+                                        <strong>{{ application.application_number }}</strong>
+                                        <div class="text-muted small">{{ application.birth_certificate.certificate_number }}</div>
+                                    </td>
+                                    <td>
+                                        <strong>{{ application.full_name }}</strong>
+                                        <div class="text-muted small">{{ application.phone_number }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if application.application_type == 'new' %}bg-success{% elif application.application_type == 'replacement' %}bg-warning{% else %}bg-info{% endif %}">
+                                            {{ application.get_application_type_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if application.status == 'started' or application.status == 'documents_uploaded' %}bg-secondary
+                                            {% elif application.status == 'chief_review' or application.status == 'do_review' %}bg-warning
+                                            {% elif application.status == 'chief_approved' or application.status == 'do_approved' %}bg-success
+                                            {% elif application.status == 'ready_for_collection' %}bg-info
+                                            {% elif application.status == 'collected' %}bg-primary
+                                            {% elif application.status == 'rejected' or application.status == 'cancelled' %}bg-danger
+                                            {% else %}bg-light text-dark{% endif %}">
+                                            {{ application.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ application.get_entry_point_display }}</td>
+                                    <td>{{ application.current_county.name }}</td>
+                                    <td>{{ application.created_at|date:"M d, Y" }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-outline-primary view-application" 
+                                                    data-id="{{ application.application_id }}"
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#viewApplicationModal">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary edit-application" 
+                                                    data-id="{{ application.application_id }}"
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#editApplicationModal">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger delete-application" 
+                                                    data-id="{{ application.application_id }}"
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#deleteApplicationModal">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                            <a href="{% url 'applications_detail' application.application_id %}" 
+                                               class="btn btn-sm btn-outline-info">
+                                                <i class="bi bi-arrow-right"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="9" class="text-center py-4">
+                                        <i class="bi bi-inbox display-1 text-muted"></i>
+                                        <p class="text-muted mt-3">No applications found</p>
+                                        <a href="{% url 'applications_create' %}" class="btn btn-primary">
+                                            <i class="bi bi-plus-circle me-2"></i>Create First Application
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if applications.paginator.num_pages > 1 %}
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div class="text-muted">
+                            Showing {{ applications.start_index }} to {{ applications.end_index }} of {{ applications.paginator.count }} entries
+                        </div>
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination">
+                                {% if applications.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="First">
+                                        <span aria-hidden="true">&laquo;&laquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ applications.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Previous">
+                                        <span aria-hidden="true">&laquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                                
+                                {% for num in applications.paginator.page_range %}
+                                    {% if applications.number == num %}
+                                    <li class="page-item active">
+                                        <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                                    </li>
+                                    {% elif num > applications.number|add:'-3' and num < applications.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                                    </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if applications.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ applications.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Next">
+                                        <span aria-hidden="true">&raquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ applications.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Last">
+                                        <span aria-hidden="true">&raquo;&raquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- View Application Modal -->
+<div class="modal fade" id="viewApplicationModal" tabindex="-1" aria-labelledby="viewApplicationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="viewApplicationModalLabel"><i class="bi bi-card-text me-2"></i>Application Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="bi bi-person me-2"></i>Basic Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="text-center mb-3">
+                                    <div class="avatar avatar-xl bg-primary rounded-circle d-flex align-items-center justify-content-center mb-2">
+                                        <i class="bi bi-person text-white" style="font-size: 2.5rem;"></i>
+                                    </div>
+                                    <h5 id="appFullName">Loading...</h5>
+                                    <span class="badge bg-primary" id="appStatus">...</span>
+                                </div>
+                                <hr>
+                                <p><strong><i class="bi bi-hash me-2"></i>Application #:</strong> <span id="appNumber">...</span></p>
+                                <p><strong><i class="bi bi-card-checklist me-2"></i>Type:</strong> <span id="appType">...</span></p>
+                                <p><strong><i class="bi bi-door-open me-2"></i>Entry Point:</strong> <span id="appEntry">...</span></p>
+                                <p><strong><i class="bi bi-calendar me-2"></i>Date of Birth:</strong> <span id="appDob">...</span></p>
+                                <p><strong><i class="bi bi-geo-alt me-2"></i>Birth Place:</strong> <span id="appBirthPlace">...</span></p>
+                                <p><strong><i class="bi bi-person-badge me-2"></i>Gender:</strong> <span id="appGender">...</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card mb-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="bi bi-telephone me-2"></i>Contact Information</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <p><strong>Phone:</strong> <span id="appPhone">...</span></p>
+                                                <p><strong>Alternative Phone:</strong> <span id="appAltPhone">...</span></p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <p><strong>Email:</strong> <span id="appEmail">...</span></p>
+                                                <p><strong>Postal Address:</strong> <span id="appPostal">...</span></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="card mb-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="bi bi-people me-2"></i>Family Information</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <p><strong>Father:</strong> <span id="appFatherName">...</span></p>
+                                                <p><strong>Father ID:</strong> <span id="appFatherId">...</span></p>
+                                                <p><strong>Mother:</strong> <span id="appMotherName">...</span></p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <p><strong>Mother ID:</strong> <span id="appMotherId">...</span></p>
+                                                <p><strong>Guardian:</strong> <span id="appGuardianName">...</span></p>
+                                                <p><strong>Clan:</strong> <span id="appClan">...</span></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="bi bi-geo me-2"></i>Location Information</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <p><strong>Birth County:</strong> <span id="appBirthCounty">...</span></p>
+                                                <p><strong>Birth Certificate:</strong> <span id="appBirthCert">...</span></p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <p><strong>Current County:</strong> <span id="appCurrentCounty">...</span></p>
+                                                <p><strong>Created:</strong> <span id="appCreated">...</span></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary edit-from-view" data-id="">
+                    <i class="bi bi-pencil me-2"></i>Edit Application
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Application Modal -->
+<div class="modal fade" id="editApplicationModal" tabindex="-1" aria-labelledby="editApplicationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="editApplicationModalLabel"><i class="bi bi-pencil-square me-2"></i>Edit Application</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editApplicationForm" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editFullName" class="form-label">Full Name</label>
+                                <input type="text" class="form-control" id="editFullName" name="full_name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editPhone" class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" id="editPhone" name="phone_number" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editAltPhone" class="form-label">Alternative Phone</label>
+                                <input type="tel" class="form-control" id="editAltPhone" name="alternative_phone">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editEmail" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="editEmail" name="email">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPostal" class="form-label">Postal Address</label>
+                        <textarea class="form-control" id="editPostal" name="postal_address" rows="2"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editFatherName" class="form-label">Father's Name</label>
+                                <input type="text" class="form-control" id="editFatherName" name="father_name">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editFatherId" class="form-label">Father's ID</label>
+                                <input type="text" class="form-control" id="editFatherId" name="father_id">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editMotherName" class="form-label">Mother's Name</label>
+                                <input type="text" class="form-control" id="editMotherName" name="mother_name">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editMotherId" class="form-label">Mother's ID</label>
+                                <input type="text" class="form-control" id="editMotherId" name="mother_id">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Application Modal -->
+<div class="modal fade" id="deleteApplicationModal" tabindex="-1" aria-labelledby="deleteApplicationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteApplicationModalLabel"><i class="bi bi-exclamation-triangle me-2"></i>Confirm Deletion</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this application?</p>
+                <p class="fw-bold" id="appToDelete">Loading application...</p>
+                <p class="text-danger">This action cannot be undone and will remove all associated data.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteApplicationForm" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete Application</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Auto-submit filters on change
+    document.querySelectorAll('#filterForm select, #filterForm input[type="date"]').forEach(element => {
+        element.addEventListener('change', function() {
+            document.getElementById('filterForm').submit();
+        });
+    });
+
+    // Search with delay
+    let searchTimeout;
+    document.getElementById('search').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            document.getElementById('filterForm').submit();
+        }, 500);
+    });
+
+    // Select all checkbox functionality
+    document.getElementById('selectAll').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+    });
+
+    // View Application Modal
+    const viewButtons = document.querySelectorAll('.view-application');
+    viewButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const appId = this.getAttribute('data-id');
+            loadApplicationData(appId, 'view');
+        });
+    });
+
+    // Edit Application Modal
+    const editButtons = document.querySelectorAll('.edit-application, .edit-from-view');
+    editButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const appId = this.getAttribute('data-id');
+            loadApplicationData(appId, 'edit');
+        });
+    });
+
+    // Delete Application Modal
+    const deleteButtons = document.querySelectorAll('.delete-application');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const appId = this.getAttribute('data-id');
+            loadApplicationData(appId, 'delete');
+        });
+    });
+
+    function loadApplicationData(appId, action) {
+        // Set loading state
+        if (action === 'view') {
+            document.getElementById('appFullName').textContent = 'Loading...';
+            document.querySelector('.edit-from-view').setAttribute('data-id', appId);
+        } else if (action === 'edit') {
+            document.getElementById('editApplicationForm').action = `/applications/${appId}/update/`;
+        } else if (action === 'delete') {
+            document.getElementById('deleteApplicationForm').action = `/applications/${appId}/delete/`;
+            document.getElementById('appToDelete').textContent = 'Loading...';
+        }
+
+        // Fetch application data
+        fetch(`/applications/api/${appId}/detail/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (action === 'view') {
+                    populateViewModal(data);
+                } else if (action === 'edit') {
+                    populateEditModal(data);
+                } else if (action === 'delete') {
+                    document.getElementById('appToDelete').textContent = `${data.full_name} (${data.application_number})`;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching application data:', error);
+                if (action === 'view') {
+                    document.getElementById('appFullName').textContent = 'Error loading data';
+                } else if (action === 'delete') {
+                    document.getElementById('appToDelete').textContent = 'Error loading application';
+                } else {
+                    alert('Error loading application data. Please try again.');
+                }
+            });
+    }
+
+    function populateViewModal(data) {
+        document.getElementById('appFullName').textContent = data.full_name;
+        document.getElementById('appStatus').textContent = data.status;
+        document.getElementById('appNumber').textContent = data.application_number;
+        document.getElementById('appType').textContent = data.application_type;
+        document.getElementById('appEntry').textContent = data.entry_point;
+        document.getElementById('appDob').textContent = data.date_of_birth;
+        document.getElementById('appBirthPlace').textContent = data.place_of_birth;
+        document.getElementById('appGender').textContent = data.gender;
+        document.getElementById('appPhone').textContent = data.phone_number;
+        document.getElementById('appAltPhone').textContent = data.alternative_phone;
+        document.getElementById('appEmail').textContent = data.email;
+        document.getElementById('appPostal').textContent = data.postal_address;
+        document.getElementById('appFatherName').textContent = data.father_name;
+        document.getElementById('appFatherId').textContent = data.father_id;
+        document.getElementById('appMotherName').textContent = data.mother_name;
+        document.getElementById('appMotherId').textContent = data.mother_id;
+        document.getElementById('appGuardianName').textContent = data.guardian_name;
+        document.getElementById('appClan').textContent = data.clan_name;
+        document.getElementById('appBirthCounty').textContent = data.county_of_birth;
+        document.getElementById('appBirthCert').textContent = data.birth_certificate;
+        document.getElementById('appCurrentCounty').textContent = data.current_county;
+        document.getElementById('appCreated').textContent = data.created_at;
+    }
+
+    function populateEditModal(data) {
+        document.getElementById('editFullName').value = data.full_name;
+        document.getElementById('editPhone').value = data.phone_number;
+        document.getElementById('editAltPhone').value = data.alternative_phone === 'N/A' ? '' : data.alternative_phone;
+        document.getElementById('editEmail').value = data.email === 'No email provided' ? '' : data.email;
+        document.getElementById('editPostal').value = data.postal_address === 'No address provided' ? '' : data.postal_address;
+        document.getElementById('editFatherName').value = data.father_name === 'Not provided' ? '' : data.father_name;
+        document.getElementById('editFatherId').value = data.father_id === 'Not provided' ? '' : data.father_id;
+        document.getElementById('editMotherName').value = data.mother_name === 'Not provided' ? '' : data.mother_name;
+        document.getElementById('editMotherId').value = data.mother_id === 'Not provided' ? '' : data.mother_id;
+    }
+
+    // Submit Edit Form
+    document.getElementById('editApplicationForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const form = this;
+        const formData = new FormData(form);
+        
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editApplicationModal'));
+                modal.hide();
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error updating application:', error);
+            alert('An error occurred while updating the application. Please try again.');
+        });
+    });
+
+    // Submit Delete Form
+    document.getElementById('deleteApplicationForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const form = this;
+        const formData = new FormData(form);
+        
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('deleteApplicationModal'));
+                modal.hide();
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting application:', error);
+            alert('An error occurred while deleting the application. Please try again.');
+        });
+    });
+});
+</script>
+{% endblock %}

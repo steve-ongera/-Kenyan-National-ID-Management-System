@@ -394,3 +394,436 @@ def citizen_dashboard(request):
     }
     
     return render(request, 'dashboards/citizen_dashboard.html', context)
+
+
+
+# views.py
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.core.paginator import Paginator
+from django.http import JsonResponse
+from django.db.models import Q
+from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from django.forms import model_to_dict
+from decimal import Decimal
+import json
+
+from .models import (
+    IDApplication, CustomUser, BirthCertificate, County, SubCounty, 
+    Division, Location, SubLocation, Village, ChiefOffice, DOOffice,
+    HudumaCentre, DocumentType, Document, ApplicationDocument
+)
+
+
+@login_required
+def id_applications_list(request):
+    """List all ID applications with search, filter, and pagination"""
+    applications = IDApplication.objects.select_related(
+        'applicant', 'birth_certificate', 'county_of_birth', 'current_county',
+        'chief_office', 'do_office', 'huduma_centre'
+    ).order_by('-created_at')
+    
+    # Search functionality
+    search_query = request.GET.get('search', '')
+    if search_query:
+        applications = applications.filter(
+            Q(application_number__icontains=search_query) |
+            Q(full_name__icontains=search_query) |
+            Q(applicant__username__icontains=search_query) |
+            Q(applicant__phone_number__icontains=search_query) |
+            Q(birth_certificate__certificate_number__icontains=search_query)
+        )
+    
+    # Filter by status
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        applications = applications.filter(status=status_filter)
+    
+    # Filter by application type
+    type_filter = request.GET.get('type', '')
+    if type_filter:
+        applications = applications.filter(application_type=type_filter)
+    
+    # Filter by entry point
+    entry_filter = request.GET.get('entry', '')
+    if entry_filter:
+        applications = applications.filter(entry_point=entry_filter)
+    
+    # Filter by county
+    county_filter = request.GET.get('county', '')
+    if county_filter:
+        applications = applications.filter(current_county_id=county_filter)
+    
+    # Date range filter
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    if date_from:
+        applications = applications.filter(created_at__date__gte=date_from)
+    if date_to:
+        applications = applications.filter(created_at__date__lte=date_to)
+    
+    # Pagination
+    paginator = Paginator(applications, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Get filter options for dropdowns
+    status_choices = IDApplication.APPLICATION_STATUS
+    type_choices = IDApplication.APPLICATION_TYPES
+    entry_choices = IDApplication.ENTRY_POINTS
+    counties = County.objects.all().order_by('name')
+    
+    context = {
+        'applications': page_obj,
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'type_filter': type_filter,
+        'entry_filter': entry_filter,
+        'county_filter': county_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'status_choices': status_choices,
+        'type_choices': type_choices,
+        'entry_choices': entry_choices,
+        'counties': counties,
+    }
+    
+    return render(request, 'id_applications/list.html', context)
+
+
+@login_required
+def id_application_detail(request, application_id):
+    """View detailed information about a specific ID application"""
+    application = get_object_or_404(
+        IDApplication.objects.select_related(
+            'applicant', 'birth_certificate', 'county_of_birth', 'current_county',
+            'chief_office', 'do_office', 'huduma_centre', 'chief', 'do_officer'
+        ).prefetch_related(
+            'application_documents__document',
+            'status_history',
+            'notifications',
+            'payments'
+        ),
+        application_id=application_id
+    )
+    
+    # Get application documents
+    app_documents = application.application_documents.select_related('document', 'document_type')
+    
+    # Get status history
+    status_history = application.status_history.select_related('changed_by').order_by('-timestamp')
+    
+    # Get notifications
+    notifications = application.notifications.order_by('-created_at')
+    
+    # Get payments
+    payments = application.payments.select_related('fee').order_by('-created_at')
+    
+    context = {
+        'application': application,
+        'app_documents': app_documents,
+        'status_history': status_history,
+        'notifications': notifications,
+        'payments': payments,
+    }
+    
+    return render(request, 'id_applications/detail.html', context)
+
+
+@login_required
+def id_application_create(request):
+    """Create a new ID application"""
+    if request.method == 'POST':
+        try:
+            # Get birth certificate
+            cert_number = request.POST.get('birth_certificate')
+            birth_certificate = get_object_or_404(BirthCertificate, certificate_number=cert_number)
+            
+            # Create application
+            application = IDApplication.objects.create(
+                applicant=request.user,
+                birth_certificate=birth_certificate,
+                application_type=request.POST.get('application_type', 'new'),
+                entry_point=request.POST.get('entry_point', 'online'),
+                full_name=request.POST.get('full_name'),
+                date_of_birth=request.POST.get('date_of_birth'),
+                place_of_birth=request.POST.get('place_of_birth'),
+                gender=request.POST.get('gender'),
+                
+                # Birth location
+                county_of_birth_id=request.POST.get('county_of_birth'),
+                sub_county_of_birth_id=request.POST.get('sub_county_of_birth'),
+                division_of_birth_id=request.POST.get('division_of_birth'),
+                location_of_birth_id=request.POST.get('location_of_birth'),
+                sub_location_of_birth_id=request.POST.get('sub_location_of_birth'),
+                village_of_birth_id=request.POST.get('village_of_birth'),
+                
+                # Current address
+                current_county_id=request.POST.get('current_county'),
+                current_sub_county_id=request.POST.get('current_sub_county'),
+                current_division_id=request.POST.get('current_division'),
+                current_location_id=request.POST.get('current_location'),
+                current_sub_location_id=request.POST.get('current_sub_location'),
+                current_village_id=request.POST.get('current_village'),
+                
+                # Family info
+                clan_name=request.POST.get('clan_name'),
+                father_name=request.POST.get('father_name'),
+                father_id=request.POST.get('father_id'),
+                mother_name=request.POST.get('mother_name'),
+                mother_id=request.POST.get('mother_id'),
+                guardian_name=request.POST.get('guardian_name'),
+                guardian_id=request.POST.get('guardian_id'),
+                guardian_relationship=request.POST.get('guardian_relationship'),
+                
+                # Contact info
+                phone_number=request.POST.get('phone_number'),
+                alternative_phone=request.POST.get('alternative_phone'),
+                email=request.POST.get('email'),
+                postal_address=request.POST.get('postal_address'),
+                
+                # For replacements
+                previous_id_number=request.POST.get('previous_id_number'),
+                police_ob_number=request.POST.get('police_ob_number'),
+                police_station=request.POST.get('police_station'),
+                replacement_reason=request.POST.get('replacement_reason'),
+                
+                # For name changes
+                old_name=request.POST.get('old_name'),
+                new_name=request.POST.get('new_name'),
+                name_change_reason=request.POST.get('name_change_reason'),
+            )
+            
+            messages.success(request, f'ID Application {application.application_number} created successfully!')
+            return redirect('id_applications:detail', application_id=application.application_id)
+            
+        except Exception as e:
+            messages.error(request, f'Error creating application: {str(e)}')
+    
+    # Get data for form dropdowns
+    counties = County.objects.all().order_by('name')
+    birth_certificates = BirthCertificate.objects.filter(is_active=True).order_by('full_name')
+    
+    context = {
+        'counties': counties,
+        'birth_certificates': birth_certificates,
+        'application_types': IDApplication.APPLICATION_TYPES,
+        'entry_points': IDApplication.ENTRY_POINTS,
+        'replacement_reasons': IDApplication.REPLACEMENT_REASONS,
+    }
+    
+    return render(request, 'id_applications/create.html', context)
+
+
+@login_required
+def id_application_update(request, application_id):
+    """Update an existing ID application"""
+    application = get_object_or_404(IDApplication, application_id=application_id)
+    
+    if request.method == 'POST':
+        try:
+            # Update application fields
+            application.full_name = request.POST.get('full_name')
+            application.phone_number = request.POST.get('phone_number')
+            application.alternative_phone = request.POST.get('alternative_phone')
+            application.email = request.POST.get('email')
+            application.postal_address = request.POST.get('postal_address')
+            
+            # Update current address
+            application.current_county_id = request.POST.get('current_county')
+            application.current_sub_county_id = request.POST.get('current_sub_county')
+            application.current_division_id = request.POST.get('current_division')
+            application.current_location_id = request.POST.get('current_location')
+            application.current_sub_location_id = request.POST.get('current_sub_location')
+            application.current_village_id = request.POST.get('current_village')
+            
+            # Update family info
+            application.clan_name = request.POST.get('clan_name')
+            application.father_name = request.POST.get('father_name')
+            application.father_id = request.POST.get('father_id')
+            application.mother_name = request.POST.get('mother_name')
+            application.mother_id = request.POST.get('mother_id')
+            application.guardian_name = request.POST.get('guardian_name')
+            application.guardian_id = request.POST.get('guardian_id')
+            application.guardian_relationship = request.POST.get('guardian_relationship')
+            
+            application.save()
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Application updated successfully!'
+                })
+            else:
+                messages.success(request, 'Application updated successfully!')
+                return redirect('id_applications:detail', application_id=application.application_id)
+                
+        except Exception as e:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Error updating application: {str(e)}'
+                })
+            else:
+                messages.error(request, f'Error updating application: {str(e)}')
+    
+    # Get data for form dropdowns
+    counties = County.objects.all().order_by('name')
+    
+    context = {
+        'application': application,
+        'counties': counties,
+    }
+    
+    return render(request, 'id_applications/update.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def id_application_delete(request, application_id):
+    """Delete an ID application"""
+    application = get_object_or_404(IDApplication, application_id=application_id)
+    
+    try:
+        app_number = application.application_number
+        application.delete()
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'message': f'Application {app_number} deleted successfully!'
+            })
+        else:
+            messages.success(request, f'Application {app_number} deleted successfully!')
+            return redirect('id_applications:list')
+            
+    except Exception as e:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'message': f'Error deleting application: {str(e)}'
+            })
+        else:
+            messages.error(request, f'Error deleting application: {str(e)}')
+            return redirect('id_applications:detail', application_id=application_id)
+
+
+@login_required
+def id_application_api_detail(request, application_id):
+    """API endpoint to get application details for AJAX requests"""
+    try:
+        application = get_object_or_404(
+            IDApplication.objects.select_related(
+                'applicant', 'birth_certificate', 'county_of_birth', 'current_county',
+                'chief_office', 'do_office', 'huduma_centre'
+            ),
+            application_id=application_id
+        )
+        
+        data = {
+            'application_number': application.application_number,
+            'full_name': application.full_name,
+            'application_type': application.get_application_type_display(),
+            'application_type_code': application.application_type,
+            'status': application.get_status_display(),
+            'status_code': application.status,
+            'entry_point': application.get_entry_point_display(),
+            'entry_point_code': application.entry_point,
+            'date_of_birth': application.date_of_birth.strftime('%B %d, %Y'),
+            'dob_iso': application.date_of_birth.strftime('%Y-%m-%d'),
+            'place_of_birth': application.place_of_birth,
+            'gender': application.get_gender_display(),
+            'gender_code': application.gender,
+            'phone_number': application.phone_number,
+            'alternative_phone': application.alternative_phone or 'N/A',
+            'email': application.email or 'No email provided',
+            'postal_address': application.postal_address or 'No address provided',
+            'birth_certificate': application.birth_certificate.certificate_number,
+            'county_of_birth': application.county_of_birth.name,
+            'current_county': application.current_county.name,
+            'clan_name': application.clan_name or 'Not specified',
+            'father_name': application.father_name or 'Not provided',
+            'father_id': application.father_id or 'Not provided',
+            'mother_name': application.mother_name or 'Not provided',
+            'mother_id': application.mother_id or 'Not provided',
+            'guardian_name': application.guardian_name or 'Not applicable',
+            'guardian_id': application.guardian_id or 'Not applicable',
+            'guardian_relationship': application.guardian_relationship or 'Not applicable',
+            'created_at': application.created_at.strftime('%B %d, %Y at %I:%M %p'),
+            'updated_at': application.updated_at.strftime('%B %d, %Y at %I:%M %p'),
+            'current_county_id': application.current_county_id,
+            'current_sub_county_id': application.current_sub_county_id,
+            'current_division_id': application.current_division_id,
+            'current_location_id': application.current_location_id,
+            'current_sub_location_id': application.current_sub_location_id,
+            'current_village_id': application.current_village_id,
+        }
+        
+        # Add replacement-specific data
+        if application.application_type == 'replacement':
+            data.update({
+                'previous_id_number': application.previous_id_number or 'Not provided',
+                'police_ob_number': application.police_ob_number or 'Not provided',
+                'police_station': application.police_station or 'Not provided',
+                'replacement_reason': application.get_replacement_reason_display() if application.replacement_reason else 'Not specified',
+                'replacement_fee': str(application.replacement_fee),
+                'fee_paid': application.fee_paid,
+            })
+        
+        # Add name change-specific data
+        if application.application_type == 'name_change':
+            data.update({
+                'old_name': application.old_name or 'Not provided',
+                'new_name': application.new_name or 'Not provided',
+                'name_change_reason': application.name_change_reason or 'Not provided',
+            })
+        
+        return JsonResponse(data)
+        
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Error fetching application data: {str(e)}'
+        }, status=500)
+
+
+# Location API endpoints for cascading dropdowns
+@login_required
+def get_sub_counties(request, county_id):
+    """Get sub-counties for a given county"""
+    sub_counties = SubCounty.objects.filter(county_id=county_id).order_by('name')
+    data = [{'id': sc.id, 'name': sc.name} for sc in sub_counties]
+    return JsonResponse(data, safe=False)
+
+
+@login_required
+def get_divisions(request, sub_county_id):
+    """Get divisions for a given sub-county"""
+    divisions = Division.objects.filter(sub_county_id=sub_county_id).order_by('name')
+    data = [{'id': d.id, 'name': d.name} for d in divisions]
+    return JsonResponse(data, safe=False)
+
+
+@login_required
+def get_locations(request, division_id):
+    """Get locations for a given division"""
+    locations = Location.objects.filter(division_id=division_id).order_by('name')
+    data = [{'id': l.id, 'name': l.name} for l in locations]
+    return JsonResponse(data, safe=False)
+
+
+@login_required
+def get_sub_locations(request, location_id):
+    """Get sub-locations for a given location"""
+    sub_locations = SubLocation.objects.filter(location_id=location_id).order_by('name')
+    data = [{'id': sl.id, 'name': sl.name} for sl in sub_locations]
+    return JsonResponse(data, safe=False)
+
+
+@login_required
+def get_villages(request, sub_location_id):
+    """Get villages for a given sub-location"""
+    villages = Village.objects.filter(sub_location_id=sub_location_id).order_by('name')
+    data = [{'id': v.id, 'name': v.name} for v in villages]
+    return JsonResponse(data, safe=False)
