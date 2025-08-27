@@ -1,0 +1,558 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Create ID Application - National ID Management System{% endblock %}
+
+{% block content %}
+<style>
+    .nav-tabs .nav-link {
+        border-radius: 0;
+        border: 1px solid #dee2e6;
+        border-bottom: 0;
+        margin-right: 2px;
+    }
+    .nav-tabs .nav-link.active {
+        background-color: #0d6efd;
+        color: white;
+        border-color: #0d6efd;
+    }
+    .tab-content {
+        border: 1px solid #dee2e6;
+        border-top: 0;
+        padding: 20px;
+        background: white;
+    }
+    .form-section {
+        margin-bottom: 2rem;
+    }
+    .form-section h6 {
+        color: #6c757d;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    .required {
+        color: #dc3545;
+    }
+</style>
+
+<div class="message-container" id="system-messages">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+        <i class="bi {% if message.tags == 'success' %}bi-check-circle{% else %}bi-exclamation-triangle{% endif %} me-2"></i>
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="pagetitle">
+    <h1><i class="bi bi-plus-circle me-2"></i>Create New ID Application</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="#"><i class="bi bi-house-door"></i> Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'applications_list' %}">ID Applications</a></li>
+            <li class="breadcrumb-item active">Create Application</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-file-earmark-plus me-2"></i>New ID Application Form</h5>
+        </div>
+        <div class="card-body p-0">
+            <form method="POST" id="applicationForm">
+                {% csrf_token %}
+                
+                <!-- Navigation Tabs -->
+                <ul class="nav nav-tabs" id="applicationTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" type="button" role="tab">
+                            <i class="bi bi-person me-2"></i>Basic Info
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="location-tab" data-bs-toggle="tab" data-bs-target="#location" type="button" role="tab">
+                            <i class="bi bi-geo-alt me-2"></i>Location
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="family-tab" data-bs-toggle="tab" data-bs-target="#family" type="button" role="tab">
+                            <i class="bi bi-people me-2"></i>Family
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact" type="button" role="tab">
+                            <i class="bi bi-telephone me-2"></i>Contact
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="additional-tab" data-bs-toggle="tab" data-bs-target="#additional" type="button" role="tab">
+                            <i class="bi bi-plus-square me-2"></i>Additional
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="applicationTabContent">
+                    <!-- Basic Information Tab -->
+                    <div class="tab-pane fade show active" id="basic" role="tabpanel">
+                        <div class="form-section">
+                            <h6><i class="bi bi-card-text me-2"></i>Application Details</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label for="application_type" class="form-label">Application Type <span class="required">*</span></label>
+                                    <select class="form-select" id="application_type" name="application_type" required>
+                                        <option value="">Select Type</option>
+                                        {% for code, display in application_types %}
+                                        <option value="{{ code }}">{{ display }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="entry_point" class="form-label">Entry Point <span class="required">*</span></label>
+                                    <select class="form-select" id="entry_point" name="entry_point" required>
+                                        <option value="">Select Entry Point</option>
+                                        {% for code, display in entry_points %}
+                                        <option value="{{ code }}">{{ display }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="birth_certificate" class="form-label">Birth Certificate <span class="required">*</span></label>
+                                    <select class="form-select" id="birth_certificate" name="birth_certificate" required>
+                                        <option value="">Select Birth Certificate</option>
+                                        {% for cert in birth_certificates %}
+                                        <option value="{{ cert.certificate_number }}">{{ cert.certificate_number }} - {{ cert.full_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h6><i class="bi bi-person me-2"></i>Personal Information</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="full_name" class="form-label">Full Name <span class="required">*</span></label>
+                                    <input type="text" class="form-control" id="full_name" name="full_name" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="date_of_birth" class="form-label">Date of Birth <span class="required">*</span></label>
+                                    <input type="date" class="form-control" id="date_of_birth" name="date_of_birth" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="gender" class="form-label">Gender <span class="required">*</span></label>
+                                    <select class="form-select" id="gender" name="gender" required>
+                                        <option value="">Select Gender</option>
+                                        <option value="M">Male</option>
+                                        <option value="F">Female</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-12">
+                                    <label for="place_of_birth" class="form-label">Place of Birth <span class="required">*</span></label>
+                                    <input type="text" class="form-control" id="place_of_birth" name="place_of_birth" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Location Information Tab -->
+                    <div class="tab-pane fade" id="location" role="tabpanel">
+                        <div class="form-section">
+                            <h6><i class="bi bi-geo me-2"></i>Birth Location</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label for="county_of_birth" class="form-label">County <span class="required">*</span></label>
+                                    <select class="form-select location-select" id="county_of_birth" name="county_of_birth" data-target="sub_county_of_birth" data-url="/api/sub-counties/" required>
+                                        <option value="">Select County</option>
+                                        {% for county in counties %}
+                                        <option value="{{ county.id }}">{{ county.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="sub_county_of_birth" class="form-label">Sub County <span class="required">*</span></label>
+                                    <select class="form-select location-select" id="sub_county_of_birth" name="sub_county_of_birth" data-target="division_of_birth" data-url="/api/divisions/" required disabled>
+                                        <option value="">Select Sub County</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="division_of_birth" class="form-label">Division <span class="required">*</span></label>
+                                    <select class="form-select location-select" id="division_of_birth" name="division_of_birth" data-target="location_of_birth" data-url="/api/locations/" required disabled>
+                                        <option value="">Select Division</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-4">
+                                    <label for="location_of_birth" class="form-label">Location <span class="required">*</span></label>
+                                    <select class="form-select location-select" id="location_of_birth" name="location_of_birth" data-target="sub_location_of_birth" data-url="/api/sub-locations/" required disabled>
+                                        <option value="">Select Location</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="sub_location_of_birth" class="form-label">Sub Location <span class="required">*</span></label>
+                                    <select class="form-select location-select" id="sub_location_of_birth" name="sub_location_of_birth" data-target="village_of_birth" data-url="/api/villages/" required disabled>
+                                        <option value="">Select Sub Location</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="village_of_birth" class="form-label">Village <span class="required">*</span></label>
+                                    <select class="form-select" id="village_of_birth" name="village_of_birth" required disabled>
+                                        <option value="">Select Village</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h6><i class="bi bi-house me-2"></i>Current Address</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label for="current_county" class="form-label">County <span class="required">*</span></label>
+                                    <select class="form-select location-select" id="current_county" name="current_county" data-target="current_sub_county" data-url="/api/sub-counties/" required>
+                                        <option value="">Select County</option>
+                                        {% for county in counties %}
+                                        <option value="{{ county.id }}">{{ county.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="current_sub_county" class="form-label">Sub County <span class="required">*</span></label>
+                                    <select class="form-select location-select" id="current_sub_county" name="current_sub_county" data-target="current_division" data-url="/api/divisions/" required disabled>
+                                        <option value="">Select Sub County</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="current_division" class="form-label">Division <span class="required">*</span></label>
+                                    <select class="form-select location-select" id="current_division" name="current_division" data-target="current_location" data-url="/api/locations/" required disabled>
+                                        <option value="">Select Division</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-4">
+                                    <label for="current_location" class="form-label">Location <span class="required">*</span></label>
+                                    <select class="form-select location-select" id="current_location" name="current_location" data-target="current_sub_location" data-url="/api/sub-locations/" required disabled>
+                                        <option value="">Select Location</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="current_sub_location" class="form-label">Sub Location <span class="required">*</span></label>
+                                    <select class="form-select location-select" id="current_sub_location" name="current_sub_location" data-target="current_village" data-url="/api/villages/" required disabled>
+                                        <option value="">Select Sub Location</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="current_village" class="form-label">Village <span class="required">*</span></label>
+                                    <select class="form-select" id="current_village" name="current_village" required disabled>
+                                        <option value="">Select Village</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Family Information Tab -->
+                    <div class="tab-pane fade" id="family" role="tabpanel">
+                        <div class="form-section">
+                            <h6><i class="bi bi-people me-2"></i>Family Information</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="father_name" class="form-label">Father's Full Name</label>
+                                    <input type="text" class="form-control" id="father_name" name="father_name">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="father_id" class="form-label">Father's ID Number</label>
+                                    <input type="text" class="form-control" id="father_id" name="father_id">
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <label for="mother_name" class="form-label">Mother's Full Name</label>
+                                    <input type="text" class="form-control" id="mother_name" name="mother_name">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="mother_id" class="form-label">Mother's ID Number</label>
+                                    <input type="text" class="form-control" id="mother_id" name="mother_id">
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-4">
+                                    <label for="guardian_name" class="form-label">Guardian's Name</label>
+                                    <input type="text" class="form-control" id="guardian_name" name="guardian_name">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="guardian_id" class="form-label">Guardian's ID</label>
+                                    <input type="text" class="form-control" id="guardian_id" name="guardian_id">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="guardian_relationship" class="form-label">Relationship</label>
+                                    <input type="text" class="form-control" id="guardian_relationship" name="guardian_relationship" placeholder="e.g., Uncle, Aunt">
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <label for="clan_name" class="form-label">Clan Name</label>
+                                    <input type="text" class="form-control" id="clan_name" name="clan_name">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact Information Tab -->
+                    <div class="tab-pane fade" id="contact" role="tabpanel">
+                        <div class="form-section">
+                            <h6><i class="bi bi-telephone me-2"></i>Contact Information</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="phone_number" class="form-label">Phone Number <span class="required">*</span></label>
+                                    <input type="tel" class="form-control" id="phone_number" name="phone_number" placeholder="0712345678" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="alternative_phone" class="form-label">Alternative Phone</label>
+                                    <input type="tel" class="form-control" id="alternative_phone" name="alternative_phone" placeholder="0712345678">
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <label for="email" class="form-label">Email Address</label>
+                                    <input type="email" class="form-control" id="email" name="email" placeholder="your.email@example.com">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="postal_address" class="form-label">Postal Address</label>
+                                    <input type="text" class="form-control" id="postal_address" name="postal_address" placeholder="P.O. Box 1234-00100, Nairobi">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Information Tab -->
+                    <div class="tab-pane fade" id="additional" role="tabpanel">
+                        <!-- Replacement Fields -->
+                        <div id="replacement-fields" style="display: none;">
+                            <div class="form-section">
+                                <h6><i class="bi bi-arrow-repeat me-2"></i>Replacement Details</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="previous_id_number" class="form-label">Previous ID Number</label>
+                                        <input type="text" class="form-control" id="previous_id_number" name="previous_id_number">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="replacement_reason" class="form-label">Replacement Reason</label>
+                                        <select class="form-select" id="replacement_reason" name="replacement_reason">
+                                            <option value="">Select Reason</option>
+                                            {% for code, display in replacement_reasons %}
+                                            <option value="{{ code }}">{{ display }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-md-6">
+                                        <label for="police_ob_number" class="form-label">Police OB Number</label>
+                                        <input type="text" class="form-control" id="police_ob_number" name="police_ob_number">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="police_station" class="form-label">Police Station</label>
+                                        <input type="text" class="form-control" id="police_station" name="police_station">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Name Change Fields -->
+                        <div id="name-change-fields" style="display: none;">
+                            <div class="form-section">
+                                <h6><i class="bi bi-person-lines-fill me-2"></i>Name Change Details</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="old_name" class="form-label">Old Name</label>
+                                        <input type="text" class="form-control" id="old_name" name="old_name">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="new_name" class="form-label">New Name</label>
+                                        <input type="text" class="form-control" id="new_name" name="new_name">
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-md-12">
+                                        <label for="name_change_reason" class="form-label">Reason for Name Change</label>
+                                        <textarea class="form-control" id="name_change_reason" name="name_change_reason" rows="3"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Default message for new applications -->
+                        <div id="new-application-info">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>New ID Application</strong><br>
+                                No additional information required for new ID applications. Please ensure all other tabs are completed accurately.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="card-footer bg-light">
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'applications_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Cancel
+                        </a>
+                        <div>
+                            <button type="button" class="btn btn-outline-primary me-2" id="prevBtn" onclick="nextPrev(-1)" style="display: none;">
+                                <i class="bi bi-chevron-left me-2"></i>Previous
+                            </button>
+                            <button type="button" class="btn btn-primary me-2" id="nextBtn" onclick="nextPrev(1)">
+                                Next<i class="bi bi-chevron-right ms-2"></i>
+                            </button>
+                            <button type="submit" class="btn btn-success" id="submitBtn" style="display: none;">
+                                <i class="bi bi-check-circle me-2"></i>Create Application
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentTab = 0;
+    const tabs = ['basic', 'location', 'family', 'contact', 'additional'];
+    
+    // Application type change handler
+    document.getElementById('application_type').addEventListener('change', function() {
+        const applicationType = this.value;
+        const replacementFields = document.getElementById('replacement-fields');
+        const nameChangeFields = document.getElementById('name-change-fields');
+        const newAppInfo = document.getElementById('new-application-info');
+        
+        // Hide all additional sections
+        replacementFields.style.display = 'none';
+        nameChangeFields.style.display = 'none';
+        newAppInfo.style.display = 'none';
+        
+        // Show relevant section
+        if (applicationType === 'replacement') {
+            replacementFields.style.display = 'block';
+        } else if (applicationType === 'name_change') {
+            nameChangeFields.style.display = 'block';
+        } else if (applicationType === 'new') {
+            newAppInfo.style.display = 'block';
+        }
+    });
+    
+    // Location cascade functionality
+    document.querySelectorAll('.location-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const targetId = this.dataset.target;
+            const url = this.dataset.url;
+            const targetSelect = document.getElementById(targetId);
+            
+            if (this.value && targetSelect) {
+                fetch(`${url}${this.value}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        targetSelect.innerHTML = '<option value="">Select...</option>';
+                        data.forEach(item => {
+                            targetSelect.innerHTML += `<option value="${item.id}">${item.name}</option>`;
+                        });
+                        targetSelect.disabled = false;
+                        
+                        // Clear and disable subsequent selects
+                        const allSelects = document.querySelectorAll('.location-select');
+                        let found = false;
+                        allSelects.forEach(s => {
+                            if (found) {
+                                s.innerHTML = '<option value="">Select...</option>';
+                                s.disabled = true;
+                            }
+                            if (s.id === targetId) found = true;
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        targetSelect.innerHTML = '<option value="">Error loading data</option>';
+                    });
+            }
+        });
+    });
+    
+    // Tab navigation
+    window.nextPrev = function(n) {
+        const tabElements = document.querySelectorAll('#applicationTabs .nav-link');
+        const currentTabElement = tabElements[currentTab];
+        
+        // Validate current tab before proceeding
+        if (n === 1 && !validateTab(tabs[currentTab])) {
+            return;
+        }
+        
+        // Move to next/previous tab
+        currentTab += n;
+        
+        if (currentTab >= tabs.length) {
+            return;
+        }
+        
+        // Show the correct tab
+        const targetTab = document.getElementById(tabs[currentTab] + '-tab');
+        const tab = new bootstrap.Tab(targetTab);
+        tab.show();
+        
+        // Update button visibility
+        updateButtons();
+    };
+    
+    function updateButtons() {
+        document.getElementById('prevBtn').style.display = currentTab === 0 ? 'none' : 'inline-block';
+        document.getElementById('nextBtn').style.display = currentTab === tabs.length - 1 ? 'none' : 'inline-block';
+        document.getElementById('submitBtn').style.display = currentTab === tabs.length - 1 ? 'inline-block' : 'none';
+    }
+    
+    function validateTab(tabName) {
+        const tabPane = document.getElementById(tabName);
+        const requiredFields = tabPane.querySelectorAll('[required]');
+        let isValid = true;
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            alert(`Please fill in all required fields in the ${tabName.charAt(0).toUpperCase() + tabName.slice(1)} tab.`);
+        }
+        
+        return isValid;
+    }
+    
+    // Listen for manual tab clicks
+    document.querySelectorAll('#applicationTabs .nav-link').forEach((tab, index) => {
+        tab.addEventListener('click', function() {
+            currentTab = index;
+            updateButtons();
+        });
+    });
+    
+    // Initial button state
+    updateButtons();
+    
+    // Show new application info by default
+    document.getElementById('new-application-info').style.display = 'block';
+});
+</script>
+{% endblock %}

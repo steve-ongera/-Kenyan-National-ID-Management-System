@@ -1,0 +1,198 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Delete Application {{ application.application_number }} - National ID Management System{% endblock %}
+{% block content %}
+
+<style>
+    .delete-confirmation {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .warning-icon {
+        font-size: 4rem;
+        color: #fff3cd;
+        margin-bottom: 1rem;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+    
+    .application-summary {
+        background: #fff;
+        border-radius: 10px;
+        padding: 1.5rem;
+        border-left: 5px solid #dc3545;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .consequence-item {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 0 5px 5px 0;
+    }
+    
+    .btn-delete-confirm {
+        background: linear-gradient(45deg, #dc3545, #c82333);
+        border: none;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 12px 30px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-delete-confirm:hover {
+        background: linear-gradient(45deg, #c82333, #a71e2a);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+    }
+    
+    .btn-cancel {
+        background: linear-gradient(45deg, #6c757d, #5a6268);
+        border: none;
+        font-weight: 600;
+        padding: 12px 30px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-cancel:hover {
+        background: linear-gradient(45deg, #5a6268, #495057);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
+    }
+</style>
+
+<div class="message-container" id="system-messages">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+        <i class="bi {% if message.tags == 'success' %}bi-check-circle{% else %}bi-exclamation-triangle{% endif %} me-2"></i>
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="pagetitle">
+    <h1><i class="bi bi-exclamation-triangle me-2 text-danger"></i>Delete Application</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="#"><i class="bi bi-house-door"></i> Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'applications_list' %}">ID Applications</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'applications_detail' application.application_id %}">{{ application.application_number }}</a></li>
+            <li class="breadcrumb-item active">Delete</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <!-- Warning Header -->
+                <div class="delete-confirmation text-center">
+                    <i class="bi bi-exclamation-triangle-fill warning-icon"></i>
+                    <h2 class="mb-3">⚠️ DANGER ZONE ⚠️</h2>
+                    <h4>You are about to permanently delete this ID application</h4>
+                    <p class="mb-0">This action cannot be undone. Please read the consequences below carefully.</p>
+                </div>
+
+                <!-- Application Summary -->
+                <div class="application-summary mb-4">
+                    <h5 class="text-danger mb-3">
+                        <i class="bi bi-file-earmark-x me-2"></i>Application to be deleted:
+                    </h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Application Number:</strong><br>
+                                <span class="badge bg-primary fs-6">{{ application.application_number }}</span>
+                            </p>
+                            <p><strong>Applicant Name:</strong><br>{{ application.full_name }}</p>
+                            <p><strong>Application Type:</strong><br>
+                                <span class="badge 
+                                    {% if application.application_type == 'new' %}bg-success
+                                    {% elif application.application_type == 'replacement' %}bg-warning
+                                    {% else %}bg-info{% endif %}">
+                                    {{ application.get_application_type_display }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Current Status:</strong><br>
+                                <span class="badge 
+                                    {% if application.status == 'started' or application.status == 'documents_uploaded' %}bg-secondary
+                                    {% elif application.status == 'chief_review' or application.status == 'do_review' %}bg-warning
+                                    {% elif application.status == 'chief_approved' or application.status == 'do_approved' %}bg-success
+                                    {% elif application.status == 'ready_for_collection' %}bg-info
+                                    {% elif application.status == 'collected' %}bg-primary
+                                    {% elif application.status == 'rejected' or application.status == 'cancelled' %}bg-danger
+                                    {% else %}bg-light text-dark{% endif %}">
+                                    {{ application.get_status_display }}
+                                </span>
+                            </p>
+                            <p><strong>Date of Birth:</strong><br>{{ application.date_of_birth|date:"F d, Y" }}</p>
+                            <p><strong>Created:</strong><br>{{ application.created_at|date:"F d, Y \a\\t g:i A" }}</p>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <p><strong>Birth Certificate:</strong> {{ application.birth_certificate.certificate_number }}</p>
+                            <p><strong>Phone Number:</strong> {{ application.phone_number }}</p>
+                            {% if application.email %}
+                            <p><strong>Email:</strong> {{ application.email }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Consequences -->
+                <div class="mb-4">
+                    <h5 class="text-warning mb-3">
+                        <i class="bi bi-exclamation-circle me-2"></i>What will happen when you delete this application:
+                    </h5>
+                    
+                    <div class="consequence-item">
+                        <h6><i class="bi bi-trash me-2"></i>Permanent Data Loss</h6>
+                        <p class="mb-0">All application data, including personal information, location details, family information, and contact details will be permanently removed from the system.</p>
+                    </div>
+
+                    <div class="consequence-item">
+                        <h6><i class="bi bi-clock-history me-2"></i>Status History</h6>
+                        <p class="mb-0">All status change history and tracking information will be lost. You won't be able to see when the application was created, updated, or who made changes.</p>
+                    </div>
+
+                    <div class="consequence-item">
+                        <h6><i class="bi bi-shield-lock me-2"></i>Security & Compliance</h6>
+                        <p class="mb-0">Once deleted, this application cannot be restored without re-submission by the applicant.</p>
+                    </div>
+                </div>
+
+                <!-- Confirmation Form -->
+                <form method="post" class="text-center">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-delete-confirm me-3">
+                        <i class="bi bi-trash-fill me-2"></i>Yes, Delete Application
+                    </button>
+                    <a href="{% url 'applications_detail' application.application_id %}" class="btn btn-cancel">
+                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    </a>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

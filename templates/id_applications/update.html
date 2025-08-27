@@ -1,0 +1,447 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Update Application {{ application.application_number }} - National ID Management System{% endblock %}
+{% block content %}
+
+<style>
+    .nav-tabs .nav-link {
+        border-radius: 0;
+        border: 1px solid #dee2e6;
+        border-bottom: 0;
+        margin-right: 2px;
+    }
+    .nav-tabs .nav-link.active {
+        background-color: #0d6efd;
+        color: white;
+        border-color: #0d6efd;
+    }
+    .tab-content {
+        border: 1px solid #dee2e6;
+        border-top: 0;
+        padding: 20px;
+        background: white;
+    }
+    .form-section {
+        margin-bottom: 2rem;
+    }
+    .form-section h6 {
+        color: #6c757d;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    .required {
+        color: #dc3545;
+    }
+    .readonly-field {
+        background-color: #f8f9fa;
+        border-color: #e9ecef;
+    }
+</style>
+
+
+<div class="message-container" id="system-messages">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+        <i class="bi {% if message.tags == 'success' %}bi-check-circle{% else %}bi-exclamation-triangle{% endif %} me-2"></i>
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="pagetitle">
+    <h1><i class="bi bi-pencil-square me-2"></i>Update Application {{ application.application_number }}</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="#"><i class="bi bi-house-door"></i> Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'applications_list' %}">ID Applications</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'applications_detail' application.application_id %}">{{ application.application_number }}</a></li>
+            <li class="breadcrumb-item active">Update</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Update Application - {{ application.full_name }}</h5>
+        </div>
+        <div class="card-body p-0">
+            <form method="POST" id="updateApplicationForm">
+                {% csrf_token %}
+                
+                <!-- Navigation Tabs -->
+                <ul class="nav nav-tabs" id="updateTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="personal-tab" data-bs-toggle="tab" data-bs-target="#personal" type="button" role="tab">
+                            <i class="bi bi-person me-2"></i>Personal Info
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="address-tab" data-bs-toggle="tab" data-bs-target="#address" type="button" role="tab">
+                            <i class="bi bi-house me-2"></i>Address
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="family-update-tab" data-bs-toggle="tab" data-bs-target="#family-update" type="button" role="tab">
+                            <i class="bi bi-people me-2"></i>Family
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="contact-update-tab" data-bs-toggle="tab" data-bs-target="#contact-update" type="button" role="tab">
+                            <i class="bi bi-telephone me-2"></i>Contact
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="updateTabContent">
+                    <!-- Personal Information Tab -->
+                    <div class="tab-pane fade show active" id="personal" role="tabpanel">
+                        <div class="form-section">
+                            <h6><i class="bi bi-info-circle me-2"></i>Application Information (Read-only)</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label class="form-label">Application Number</label>
+                                    <input type="text" class="form-control readonly-field" value="{{ application.application_number }}" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Application Type</label>
+                                    <input type="text" class="form-control readonly-field" value="{{ application.get_application_type_display }}" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Current Status</label>
+                                    <input type="text" class="form-control readonly-field" value="{{ application.get_status_display }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h6><i class="bi bi-person me-2"></i>Personal Details (Read-only)</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">Date of Birth</label>
+                                    <input type="text" class="form-control readonly-field" value="{{ application.date_of_birth|date:'F d, Y' }}" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Gender</label>
+                                    <input type="text" class="form-control readonly-field" value="{{ application.get_gender_display }}" readonly>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Place of Birth</label>
+                                    <input type="text" class="form-control readonly-field" value="{{ application.place_of_birth }}" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Birth Certificate</label>
+                                    <input type="text" class="form-control readonly-field" value="{{ application.birth_certificate.certificate_number }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h6><i class="bi bi-pencil me-2"></i>Editable Personal Information</h6>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label for="full_name" class="form-label">Full Name <span class="required">*</span></label>
+                                    <input type="text" class="form-control" id="full_name" name="full_name" value="{{ application.full_name }}" required>
+                                    <small class="text-muted">Only update if there's an error in the current name</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Address Information Tab -->
+                    <div class="tab-pane fade" id="address" role="tabpanel">
+                        <div class="form-section">
+                            <h6><i class="bi bi-geo me-2"></i>Birth Location (Read-only)</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">County of Birth</label>
+                                    <input type="text" class="form-control readonly-field" value="{{ application.county_of_birth.name }}" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Sub County of Birth</label>
+                                    <input type="text" class="form-control readonly-field" value="{{ application.sub_county_of_birth.name }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h6><i class="bi bi-house me-2"></i>Current Address (Editable)</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label for="current_county" class="form-label">County <span class="required">*</span></label>
+                                    <select class="form-select location-select" id="current_county" name="current_county" data-target="current_sub_county" data-url="/api/sub-counties/" required>
+                                        <option value="">Select County</option>
+                                        {% for county in counties %}
+                                        <option value="{{ county.id }}" {% if county.id == application.current_county_id %}selected{% endif %}>{{ county.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="current_sub_county" class="form-label">Sub County <span class="required">*</span></label>
+                                    <select class="form-select location-select" id="current_sub_county" name="current_sub_county" data-target="current_division" data-url="/api/divisions/" required>
+                                        <option value="">Select Sub County</option>
+                                        {% for sub_county in sub_counties %}
+                                        <option value="{{ sub_county.id }}" {% if sub_county.id == application.current_sub_county_id %}selected{% endif %}>{{ sub_county.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="current_division" class="form-label">Division <span class="required">*</span></label>
+                                    <select class="form-select location-select" id="current_division" name="current_division" data-target="current_location" data-url="/api/locations/" required>
+                                        <option value="">Select Division</option>
+                                        {% for division in divisions %}
+                                        <option value="{{ division.id }}" {% if division.id == application.current_division_id %}selected{% endif %}>{{ division.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-4">
+                                    <label for="current_location" class="form-label">Location <span class="required">*</span></label>
+                                    <select class="form-select location-select" id="current_location" name="current_location" data-target="current_sub_location" data-url="/api/sub-locations/" required>
+                                        <option value="">Select Location</option>
+                                        {% for location in locations %}
+                                        <option value="{{ location.id }}" {% if location.id == application.current_location_id %}selected{% endif %}>{{ location.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="current_sub_location" class="form-label">Sub Location <span class="required">*</span></label>
+                                    <select class="form-select location-select" id="current_sub_location" name="current_sub_location" data-target="current_village" data-url="/api/villages/" required>
+                                        <option value="">Select Sub Location</option>
+                                        {% for sub_location in sub_locations %}
+                                        <option value="{{ sub_location.id }}" {% if sub_location.id == application.current_sub_location_id %}selected{% endif %}>{{ sub_location.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="current_village" class="form-label">Village <span class="required">*</span></label>
+                                    <select class="form-select" id="current_village" name="current_village" required>
+                                        <option value="">Select Village</option>
+                                        {% for village in villages %}
+                                        <option value="{{ village.id }}" {% if village.id == application.current_village_id %}selected{% endif %}>{{ village.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Family Information Tab -->
+                    <div class="tab-pane fade" id="family-update" role="tabpanel">
+                        <div class="form-section">
+                            <h6><i class="bi bi-people me-2"></i>Family Information</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="father_name" class="form-label">Father's Full Name</label>
+                                    <input type="text" class="form-control" id="father_name" name="father_name" value="{{ application.father_name|default:'' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="father_id" class="form-label">Father's ID Number</label>
+                                    <input type="text" class="form-control" id="father_id" name="father_id" value="{{ application.father_id|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <label for="mother_name" class="form-label">Mother's Full Name</label>
+                                    <input type="text" class="form-control" id="mother_name" name="mother_name" value="{{ application.mother_name|default:'' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="mother_id" class="form-label">Mother's ID Number</label>
+                                    <input type="text" class="form-control" id="mother_id" name="mother_id" value="{{ application.mother_id|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-4">
+                                    <label for="guardian_name" class="form-label">Guardian's Name</label>
+                                    <input type="text" class="form-control" id="guardian_name" name="guardian_name" value="{{ application.guardian_name|default:'' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="guardian_id" class="form-label">Guardian's ID</label>
+                                    <input type="text" class="form-control" id="guardian_id" name="guardian_id" value="{{ application.guardian_id|default:'' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="guardian_relationship" class="form-label">Relationship</label>
+                                    <input type="text" class="form-control" id="guardian_relationship" name="guardian_relationship" value="{{ application.guardian_relationship|default:'' }}" placeholder="e.g., Uncle, Aunt">
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <label for="clan_name" class="form-label">Clan Name</label>
+                                    <input type="text" class="form-control" id="clan_name" name="clan_name" value="{{ application.clan_name|default:'' }}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact Information Tab -->
+                    <div class="tab-pane fade" id="contact-update" role="tabpanel">
+                        <div class="form-section">
+                            <h6><i class="bi bi-telephone me-2"></i>Contact Information</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="phone_number" class="form-label">Phone Number <span class="required">*</span></label>
+                                    <input type="tel" class="form-control" id="phone_number" name="phone_number" value="{{ application.phone_number }}" placeholder="0712345678" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="alternative_phone" class="form-label">Alternative Phone</label>
+                                    <input type="tel" class="form-control" id="alternative_phone" name="alternative_phone" value="{{ application.alternative_phone|default:'' }}" placeholder="0712345678">
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <label for="email" class="form-label">Email Address</label>
+                                    <input type="email" class="form-control" id="email" name="email" value="{{ application.email|default:'' }}" placeholder="your.email@example.com">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="postal_address" class="form-label">Postal Address</label>
+                                    <input type="text" class="form-control" id="postal_address" name="postal_address" value="{{ application.postal_address|default:'' }}" placeholder="P.O. Box 1234-00100, Nairobi">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Note:</strong> Changes to contact information will be tracked in the application history. Please ensure the information is accurate.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="card-footer bg-light">
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'applications_detail' application.application_id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Back to Details
+                        </a>
+                        <div>
+                            <button type="button" class="btn btn-outline-primary me-2" id="prevBtn" onclick="nextPrev(-1)" style="display: none;">
+                                <i class="bi bi-chevron-left me-2"></i>Previous
+                            </button>
+                            <button type="button" class="btn btn-primary me-2" id="nextBtn" onclick="nextPrev(1)">
+                                Next<i class="bi bi-chevron-right ms-2"></i>
+                            </button>
+                            <button type="submit" class="btn btn-success" id="updateBtn" style="display: none;">
+                                <i class="bi bi-check-circle me-2"></i>Update Application
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentTab = 0;
+    const tabs = ['personal', 'address', 'family-update', 'contact-update'];
+    
+    // Location cascade functionality
+    document.querySelectorAll('.location-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const targetId = this.dataset.target;
+            const url = this.dataset.url;
+            const targetSelect = document.getElementById(targetId);
+            
+            if (this.value && targetSelect) {
+                fetch(`${url}${this.value}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        targetSelect.innerHTML = '<option value="">Select...</option>';
+                        data.forEach(item => {
+                            targetSelect.innerHTML += `<option value="${item.id}">${item.name}</option>`;
+                        });
+                        targetSelect.disabled = false;
+                        
+                        // Clear subsequent selects
+                        const allSelects = ['current_location', 'current_sub_location', 'current_village'];
+                        const currentIndex = allSelects.indexOf(targetId);
+                        if (currentIndex !== -1) {
+                            for (let i = currentIndex + 1; i < allSelects.length; i++) {
+                                const nextSelect = document.getElementById(allSelects[i]);
+                                if (nextSelect) {
+                                    nextSelect.innerHTML = '<option value="">Select...</option>';
+                                    nextSelect.disabled = true;
+                                }
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        targetSelect.innerHTML = '<option value="">Error loading data</option>';
+                    });
+            }
+        });
+    });
+    
+    // Tab navigation
+    window.nextPrev = function(n) {
+        const tabElements = document.querySelectorAll('#updateTabs .nav-link');
+        
+        // Validate current tab before proceeding
+        if (n === 1 && !validateTab(tabs[currentTab])) {
+            return;
+        }
+        
+        // Move to next/previous tab
+        currentTab += n;
+        
+        if (currentTab >= tabs.length) {
+            return;
+        }
+        
+        // Show the correct tab
+        const targetTab = document.getElementById(tabs[currentTab] + '-tab');
+        const tab = new bootstrap.Tab(targetTab);
+        tab.show();
+        
+        // Update button visibility
+        updateButtons();
+    };
+    
+    function updateButtons() {
+        document.getElementById('prevBtn').style.display = currentTab === 0 ? 'none' : 'inline-block';
+        document.getElementById('nextBtn').style.display = currentTab === tabs.length - 1 ? 'none' : 'inline-block';
+        document.getElementById('updateBtn').style.display = currentTab === tabs.length - 1 ? 'inline-block' : 'none';
+    }
+    
+    function validateTab(tabName) {
+        const tabPane = document.getElementById(tabName);
+        const requiredFields = tabPane.querySelectorAll('[required]');
+        let isValid = true;
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            alert(`Please fill in all required fields in this section.`);
+        }
+        
+        return isValid;
+    }
+    
+    // Listen for manual tab clicks
+    document.querySelectorAll('#updateTabs .nav-link').forEach((tab, index) => {
+        tab.addEventListener('click', function() {
+            currentTab = index;
+            updateButtons();
+        });
+    });
+    
+    // Initial button state
+    updateButtons();
+});
+</script>
+{% endblock %}
