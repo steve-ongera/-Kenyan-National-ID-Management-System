@@ -47,4 +47,21 @@ urlpatterns = [
     path('birth-certificates/<str:certificate_number>/', views.birth_certificate_detail, name='birth_certificate_detail'),
     path('birth-certificates/<str:certificate_number>/update/', views.birth_certificate_update, name='birth_certificate_update'),
     path('birth-certificates/<str:certificate_number>/delete/', views.birth_certificate_delete, name='birth_certificate_delete'),
+
+    # List and dashboard
+    path('national_id/', views.national_id_list, name='national_id_list'),
+    path('statistics/', views.national_id_statistics, name='national_id_statistics'),
+    
+    path('national_id/create/', views.national_id_create, name='national_id_create'),
+    path('national_id/<str:id_number>/', views.national_id_detail, name='national_id_detail'),
+    path('national_id/<str:id_number>/edit/', views.national_id_update, name='national_id_update'),
+    path('national_id/<str:id_number>/delete/', views.national_id_delete, name='national_id_delete'),
+    
+    # Status management
+    path('<str:id_number>/mark-collected/', views.national_id_mark_collected, name='national_id_mark_collected'),
+    path('<str:id_number>/mark-printed/', views.national_id_mark_printed, name='national_id_mark_printed'),
+    path('<str:id_number>/mark-dispatched/', views.national_id_mark_dispatched, name='national_id_mark_dispatched'),
+    
+    # AJAX endpoints
+    path('ajax/sub-counties/', views.ajax_sub_counties, name='ajax_sub_counties'),
 ]

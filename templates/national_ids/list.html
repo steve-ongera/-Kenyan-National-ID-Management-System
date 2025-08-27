@@ -1,0 +1,473 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}National IDs Database - National ID Management System{% endblock %}
+
+{% block content %}
+<div class="message-container" id="system-messages">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+        <i class="bi {% if message.tags == 'success' %}bi-check-circle{% else %}bi-exclamation-triangle{% endif %} me-2"></i>
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="pagetitle">
+    <h1><i class="bi bi-card-text me-2"></i>National IDs Database</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="#"><i class="bi bi-house-door"></i> Home</a></li>
+            <li class="breadcrumb-item active">National IDs</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section">
+    <div class="row">
+        <div class="col-lg-12">
+            <!-- Statistics Cards -->
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <h5>Total IDs</h5>
+                            <h3>{{ national_ids.paginator.count|default:0 }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <h5>Collected</h5>
+                            <h3>{{ national_ids.object_list|length|default:0 }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <h5>Pending Collection</h5>
+                            <h3>0</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <h5>Active IDs</h5>
+                            <h3>{{ national_ids.paginator.count|default:0 }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters Card -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="bi bi-funnel me-2"></i>Search & Filters</h6>
+                </div>
+                <div class="card-body">
+                    <form method="GET" id="filterForm">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label for="search" class="form-label">Search</label>
+                                <input type="text" name="search" id="search" class="form-control" 
+                                       placeholder="ID number, name, application..." 
+                                       value="{{ search_query }}">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="county" class="form-label">County of Birth</label>
+                                <select name="county" id="county" class="form-select">
+                                    <option value="">All Counties</option>
+                                    {% for county in counties %}
+                                    <option value="{{ county.id }}" {% if county.id|stringformat:"s" == county_filter %}selected{% endif %}>
+                                        {{ county.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="sub_county" class="form-label">Sub County</label>
+                                <select name="sub_county" id="sub_county" class="form-select">
+                                    <option value="">All Sub Counties</option>
+                                    {% for sub_county in sub_counties %}
+                                    <option value="{{ sub_county.id }}" {% if sub_county.id|stringformat:"s" == sub_county_filter %}selected{% endif %}>
+                                        {{ sub_county.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="gender" class="form-label">Gender</label>
+                                <select name="gender" id="gender" class="form-select">
+                                    <option value="">All Genders</option>
+                                    {% for code, display in gender_choices %}
+                                    <option value="{{ code }}" {% if code == gender_filter %}selected{% endif %}>
+                                        {{ display }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="is_active" class="form-label">Status</label>
+                                <select name="is_active" id="is_active" class="form-select">
+                                    <option value="">All</option>
+                                    <option value="true" {% if is_active_filter == 'true' %}selected{% endif %}>Active</option>
+                                    <option value="false" {% if is_active_filter == 'false' %}selected{% endif %}>Inactive</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="is_collected" class="form-label">Collected</label>
+                                <select name="is_collected" id="is_collected" class="form-select">
+                                    <option value="">All</option>
+                                    <option value="true" {% if is_collected_filter == 'true' %}selected{% endif %}>Collected</option>
+                                    <option value="false" {% if is_collected_filter == 'false' %}selected{% endif %}>Not Collected</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="is_printed" class="form-label">Printed</label>
+                                <select name="is_printed" id="is_printed" class="form-select">
+                                    <option value="">All</option>
+                                    <option value="true" {% if is_printed_filter == 'true' %}selected{% endif %}>Printed</option>
+                                    <option value="false" {% if is_printed_filter == 'false' %}selected{% endif %}>Not Printed</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="date_from" class="form-label">Birth Date From</label>
+                                <input type="date" name="date_from" id="date_from" class="form-control" value="{{ date_from }}">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="date_to" class="form-label">Birth Date To</label>
+                                <input type="date" name="date_to" id="date_to" class="form-control" value="{{ date_to }}">
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary me-2">
+                                    <i class="bi bi-search me-1"></i>Filter
+                                </button>
+                                <a href="{% url 'national_id_list' %}" class="btn btn-outline-secondary me-2">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>Clear
+                                </a>
+                                <button type="button" class="btn btn-success" data-bs-toggle="collapse" data-bs-target="#bulkActions">
+                                    <i class="bi bi-check2-all me-1"></i>Bulk Actions
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Bulk Actions Panel -->
+            <div class="collapse" id="bulkActions">
+                <div class="card border-warning mb-3">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Bulk Actions</h6>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="#">
+                            {% csrf_token %}
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <select name="bulk_action" class="form-select" required>
+                                        <option value="">Select Action</option>
+                                        <option value="mark_printed">Mark as Printed</option>
+                                        <option value="mark_dispatched">Mark as Dispatched</option>
+                                        <option value="mark_ready_collection">Mark Ready for Collection</option>
+                                        <option value="deactivate">Deactivate</option>
+                                        <option value="activate">Activate</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="submit" class="btn btn-warning" id="bulkActionBtn" disabled>
+                                        <i class="bi bi-play-circle me-1"></i>Execute Action
+                                    </button>
+                                </div>
+                                <div class="col-md-4">
+                                    <span id="selectedCount" class="text-muted">0 selected</span>
+                                </div>
+                            </div>
+                            <input type="hidden" name="selected_ids" id="selectedIds">
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- National IDs Table Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0"><i class="bi bi-list-ul me-2"></i>National IDs</h5>
+                        <div>
+                            <a href="{% url 'national_id_statistics' %}" class="btn btn-light me-2">
+                                <i class="bi bi-bar-chart me-2"></i>Statistics
+                            </a>
+                            <a href="{% url 'national_id_create' %}" class="btn btn-light">
+                                <i class="bi bi-plus-circle me-2"></i>New ID
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th><input type="checkbox" id="selectAll"></th>
+                                    <th>ID Number</th>
+                                    <th>Full Name</th>
+                                    <th>Date of Birth</th>
+                                    <th>Gender</th>
+                                    <th>County of Birth</th>
+                                    <th>Application</th>
+                                    <th>Status</th>
+                                    <th>Issue Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for national_id in national_ids %}
+                                <tr>
+                                    <td><input type="checkbox" class="row-checkbox" value="{{ national_id.id_number }}"></td>
+                                    <td>
+                                        <strong>{{ national_id.id_number }}</strong>
+                                        <div class="text-muted small">{{ national_id.serial_number }}</div>
+                                    </td>
+                                    <td>
+                                        <strong>{{ national_id.full_name }}</strong>
+                                        <div class="text-muted small">{{ national_id.place_of_birth }}</div>
+                                    </td>
+                                    <td>{{ national_id.date_of_birth|date:"M d, Y" }}</td>
+                                    <td>
+                                        <span class="badge {% if national_id.gender == 'M' %}bg-primary{% else %}bg-info{% endif %}">
+                                            {% if national_id.gender == 'M' %}Male{% else %}Female{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if national_id.application %}
+                                            {{ national_id.application.county_of_birth.name }}
+                                            <div class="text-muted small">{{ national_id.application.sub_county_of_birth.name }}</div>
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if national_id.application %}
+                                            <a href="{% url 'applications_detail' national_id.application.application_id %}" 
+                                               class="text-decoration-none">
+                                                {{ national_id.application.application_number }}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">Direct Entry</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-column gap-1">
+                                            <span class="badge {% if national_id.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                                                {% if national_id.is_active %}Active{% else %}Inactive{% endif %}
+                                            </span>
+                                            
+                                            {% if national_id.is_collected %}
+                                                <span class="badge bg-success">Collected</span>
+                                            {% elif national_id.is_ready_for_collection %}
+                                                <span class="badge bg-warning">Ready</span>
+                                            {% elif national_id.is_dispatched %}
+                                                <span class="badge bg-info">Dispatched</span>
+                                            {% elif national_id.is_printed %}
+                                                <span class="badge bg-primary">Printed</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Processing</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>{{ national_id.date_of_issue|date:"M d, Y" }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'national_id_detail' national_id.id_number %}" 
+                                               class="btn btn-sm btn-outline-primary" 
+                                               title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{% url 'national_id_update' national_id.id_number %}" 
+                                               class="btn btn-sm btn-outline-secondary" 
+                                               title="Edit ID">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-outline-danger" 
+                                                    title="Delete ID"
+                                                    onclick="confirmDelete('{{ national_id.id_number }}', '{{ national_id.full_name }}')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="10" class="text-center py-4">
+                                        <i class="bi bi-inbox display-1 text-muted"></i>
+                                        <p class="text-muted mt-3">No national IDs found</p>
+                                        <a href="{% url 'national_id_create' %}" class="btn btn-primary">
+                                            <i class="bi bi-plus-circle me-2"></i>Create First ID
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if national_ids.paginator.num_pages > 1 %}
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div class="text-muted">
+                            Showing {{ national_ids.start_index }} to {{ national_ids.end_index }} of {{ national_ids.paginator.count }} entries
+                        </div>
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination">
+                                {% if national_ids.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="First">
+                                        <span aria-hidden="true">&laquo;&laquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ national_ids.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Previous">
+                                        <span aria-hidden="true">&laquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                                
+                                {% for num in national_ids.paginator.page_range %}
+                                    {% if national_ids.number == num %}
+                                    <li class="page-item active">
+                                        <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                                    </li>
+                                    {% elif num > national_ids.number|add:'-3' and num < national_ids.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                                    </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if national_ids.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ national_ids.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Next">
+                                        <span aria-hidden="true">&raquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ national_ids.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Last">
+                                        <span aria-hidden="true">&raquo;&raquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the National ID for <strong id="idName"></strong>?</p>
+                <p class="text-danger">This action cannot be undone and will permanently remove the National ID record.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete National ID</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Auto-submit filters on change
+    document.querySelectorAll('#filterForm select, #filterForm input[type="date"]').forEach(element => {
+        element.addEventListener('change', function() {
+            document.getElementById('filterForm').submit();
+        });
+    });
+
+    // Search with delay
+    let searchTimeout;
+    document.getElementById('search').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            document.getElementById('filterForm').submit();
+        }, 500);
+    });
+
+    // Select all checkbox functionality
+    document.getElementById('selectAll').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        updateBulkActions();
+    });
+
+    // Individual checkbox change
+    document.querySelectorAll('.row-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkActions);
+    });
+
+    // Update bulk actions
+    function updateBulkActions() {
+        const selectedBoxes = document.querySelectorAll('.row-checkbox:checked');
+        const count = selectedBoxes.length;
+        const bulkBtn = document.getElementById('bulkActionBtn');
+        const countSpan = document.getElementById('selectedCount');
+        const selectedIds = Array.from(selectedBoxes).map(cb => cb.value).join(',');
+        
+        countSpan.textContent = `${count} selected`;
+        document.getElementById('selectedIds').value = selectedIds;
+        bulkBtn.disabled = count === 0;
+    }
+
+    // Cascade county to sub-county
+    document.getElementById('county').addEventListener('change', function() {
+        const countyId = this.value;
+        const subCountySelect = document.getElementById('sub_county');
+        
+        // Clear sub-county options
+        subCountySelect.innerHTML = '<option value="">All Sub Counties</option>';
+        
+        if (countyId) {
+            fetch(`/national-ids/ajax/sub-counties/?county_id=${countyId}`)
+                .then(response => response.json())
+                .then(data => {
+                    data.sub_counties.forEach(subCounty => {
+                        const option = document.createElement('option');
+                        option.value = subCounty.id;
+                        option.textContent = subCounty.name;
+                        subCountySelect.appendChild(option);
+                    });
+                });
+        }
+    });
+});
+
+function confirmDelete(idNumber, fullName) {
+    document.getElementById('idName').textContent = fullName;
+    document.getElementById('deleteForm').action = `/national-ids/${idNumber}/delete/`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}

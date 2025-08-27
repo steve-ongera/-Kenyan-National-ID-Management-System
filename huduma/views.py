@@ -1064,4 +1064,344 @@ def birth_certificate_delete(request, certificate_number):
     
     return redirect('birth_certificates_list')
 
+# national_ids/views.py
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Q
+from django.http import JsonResponse, HttpResponse
+from django.urls import reverse
+from django.utils import timezone
+from datetime import datetime
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.contrib.messages.views import SuccessMessageMixin
 
+from .models import (
+    NationalID, IDApplication, County, SubCounty, Division, 
+    Location, SubLocation, Village, CustomUser, BirthCertificate
+)
+from .forms import NationalIDForm, NationalIDFilterForm
+
+
+@login_required
+def national_id_list(request):
+    """List all National IDs with filtering and search"""
+    national_ids = NationalID.objects.select_related(
+        'application', 
+        'application__county_of_birth',
+        'application__sub_county_of_birth',
+        'collection_location'
+    ).all()
+    
+    # Get filter parameters
+    search_query = request.GET.get('search', '')
+    county_filter = request.GET.get('county', '')
+    sub_county_filter = request.GET.get('sub_county', '')
+    gender_filter = request.GET.get('gender', '')
+    is_active_filter = request.GET.get('is_active', '')
+    is_collected_filter = request.GET.get('is_collected', '')
+    is_printed_filter = request.GET.get('is_printed', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    # Apply search filter
+    if search_query:
+        national_ids = national_ids.filter(
+            Q(id_number__icontains=search_query) |
+            Q(full_name__icontains=search_query) |
+            Q(application__application_number__icontains=search_query) |
+            Q(serial_number__icontains=search_query) |
+            Q(place_of_birth__icontains=search_query)
+        )
+    
+    # Apply county filter
+    if county_filter:
+        national_ids = national_ids.filter(
+            application__county_of_birth_id=county_filter
+        )
+    
+    # Apply sub-county filter
+    if sub_county_filter:
+        national_ids = national_ids.filter(
+            application__sub_county_of_birth_id=sub_county_filter
+        )
+    
+    # Apply gender filter
+    if gender_filter:
+        national_ids = national_ids.filter(gender=gender_filter)
+    
+    # Apply active status filter
+    if is_active_filter:
+        is_active = is_active_filter.lower() == 'true'
+        national_ids = national_ids.filter(is_active=is_active)
+    
+    # Apply collected status filter
+    if is_collected_filter:
+        is_collected = is_collected_filter.lower() == 'true'
+        national_ids = national_ids.filter(is_collected=is_collected)
+    
+    # Apply printed status filter
+    if is_printed_filter:
+        is_printed = is_printed_filter.lower() == 'true'
+        national_ids = national_ids.filter(is_printed=is_printed)
+    
+    # Apply date range filter
+    if date_from:
+        try:
+            date_from_parsed = datetime.strptime(date_from, '%Y-%m-%d').date()
+            national_ids = national_ids.filter(date_of_birth__gte=date_from_parsed)
+        except ValueError:
+            pass
+    
+    if date_to:
+        try:
+            date_to_parsed = datetime.strptime(date_to, '%Y-%m-%d').date()
+            national_ids = national_ids.filter(date_of_birth__lte=date_to_parsed)
+        except ValueError:
+            pass
+    
+    # Order by most recent first
+    national_ids = national_ids.order_by('-created_at')
+    
+    # Pagination
+    paginator = Paginator(national_ids, 25)  # Show 25 IDs per page
+    page = request.GET.get('page')
+    
+    try:
+        national_ids = paginator.page(page)
+    except PageNotAnInteger:
+        national_ids = paginator.page(1)
+    except EmptyPage:
+        national_ids = paginator.page(paginator.num_pages)
+    
+    # Get counties for filter dropdown
+    counties = County.objects.all().order_by('name')
+    
+    # Get sub-counties based on selected county
+    sub_counties = SubCounty.objects.all().order_by('name')
+    if county_filter:
+        sub_counties = sub_counties.filter(county_id=county_filter)
+    
+    # Gender choices
+    gender_choices = [('M', 'Male'), ('F', 'Female')]
+    
+    context = {
+        'national_ids': national_ids,
+        'counties': counties,
+        'sub_counties': sub_counties,
+        'gender_choices': gender_choices,
+        'search_query': search_query,
+        'county_filter': county_filter,
+        'sub_county_filter': sub_county_filter,
+        'gender_filter': gender_filter,
+        'is_active_filter': is_active_filter,
+        'is_collected_filter': is_collected_filter,
+        'is_printed_filter': is_printed_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+    }
+    
+    return render(request, 'national_ids/list.html', context)
+
+
+@login_required
+def national_id_detail(request, id_number):
+    """View National ID details"""
+    national_id = get_object_or_404(NationalID, id_number=id_number)
+    
+    context = {
+        'national_id': national_id,
+        'application': national_id.application,
+        'biometric_data': getattr(national_id.application, 'biometric_data', None),
+        'waiting_card': getattr(national_id.application, 'waiting_card', None),
+    }
+    
+    return render(request, 'national_ids/detail.html', context)
+
+
+@login_required
+def national_id_create(request):
+    """Create a new National ID (Admin function)"""
+    if request.method == 'POST':
+        form = NationalIDForm(request.POST, request.FILES)
+        if form.is_valid():
+            national_id = form.save(commit=False)
+            
+            # Set additional fields
+            national_id.place_of_issue = request.user.county.name if hasattr(request.user, 'county') and request.user.county else 'Nairobi'
+            
+            national_id.save()
+            
+            messages.success(request, f'National ID {national_id.id_number} created successfully for {national_id.full_name}.')
+            return redirect('national_id_detail', id_number=national_id.id_number)
+    else:
+        form = NationalIDForm()
+    
+    context = {
+        'form': form,
+        'title': 'Create National ID',
+        'submit_text': 'Create ID',
+    }
+    
+    return render(request, 'national_ids/form.html', context)
+
+
+@login_required
+def national_id_update(request, id_number):
+    """Update National ID details"""
+    national_id = get_object_or_404(NationalID, id_number=id_number)
+    
+    if request.method == 'POST':
+        form = NationalIDForm(request.POST, request.FILES, instance=national_id)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'National ID {national_id.id_number} updated successfully.')
+            return redirect('national_id_detail', id_number=national_id.id_number)
+    else:
+        form = NationalIDForm(instance=national_id)
+    
+    context = {
+        'form': form,
+        'national_id': national_id,
+        'title': f'Update National ID - {national_id.id_number}',
+        'submit_text': 'Update ID',
+    }
+    
+    return render(request, 'national_ids/form.html', context)
+
+
+@login_required
+def national_id_delete(request, id_number):
+    """Delete National ID"""
+    national_id = get_object_or_404(NationalID, id_number=id_number)
+    
+    if request.method == 'POST':
+        id_num = national_id.id_number
+        full_name = national_id.full_name
+        national_id.delete()
+        messages.success(request, f'National ID {id_num} for {full_name} has been deleted successfully.')
+        return redirect('national_id_list')
+    
+    context = {
+        'national_id': national_id,
+    }
+    
+    return render(request, 'national_ids/confirm_delete.html', context)
+
+
+@login_required
+def national_id_mark_collected(request, id_number):
+    """Mark National ID as collected"""
+    national_id = get_object_or_404(NationalID, id_number=id_number)
+    
+    if request.method == 'POST':
+        if not national_id.is_collected:
+            national_id.is_collected = True
+            national_id.collected_at = timezone.now()
+            national_id.collected_by = request.user
+            national_id.save()
+            
+            # Update application status
+            if hasattr(national_id, 'application'):
+                national_id.application.status = 'collected'
+                national_id.application.save()
+            
+            messages.success(request, f'National ID {national_id.id_number} marked as collected.')
+        else:
+            messages.info(request, f'National ID {national_id.id_number} is already marked as collected.')
+    
+    return redirect('national_id_detail', id_number=id_number)
+
+
+@login_required
+def national_id_mark_printed(request, id_number):
+    """Mark National ID as printed"""
+    national_id = get_object_or_404(NationalID, id_number=id_number)
+    
+    if request.method == 'POST':
+        if not national_id.is_printed:
+            national_id.is_printed = True
+            national_id.printed_at = timezone.now()
+            national_id.save()
+            
+            messages.success(request, f'National ID {national_id.id_number} marked as printed.')
+        else:
+            messages.info(request, f'National ID {national_id.id_number} is already marked as printed.')
+    
+    return redirect('national_id_detail', id_number=id_number)
+
+
+@login_required
+def national_id_mark_dispatched(request, id_number):
+    """Mark National ID as dispatched"""
+    national_id = get_object_or_404(NationalID, id_number=id_number)
+    
+    if request.method == 'POST':
+        if not national_id.is_dispatched:
+            national_id.is_dispatched = True
+            national_id.dispatched_at = timezone.now()
+            national_id.is_ready_for_collection = True
+            national_id.save()
+            
+            # Update application status
+            if hasattr(national_id, 'application'):
+                national_id.application.status = 'ready_for_collection'
+                national_id.application.save()
+            
+            messages.success(request, f'National ID {national_id.id_number} marked as dispatched and ready for collection.')
+        else:
+            messages.info(request, f'National ID {national_id.id_number} is already marked as dispatched.')
+    
+    return redirect('national_id_detail', id_number=id_number)
+
+
+@login_required
+def ajax_sub_counties(request):
+    """AJAX view to get sub-counties for a county"""
+    county_id = request.GET.get('county_id')
+    sub_counties = []
+    
+    if county_id:
+        sub_counties_qs = SubCounty.objects.filter(county_id=county_id).order_by('name')
+        sub_counties = [{'id': sc.id, 'name': sc.name} for sc in sub_counties_qs]
+    
+    return JsonResponse({'sub_counties': sub_counties})
+
+
+@login_required
+def national_id_statistics(request):
+    """Dashboard with National ID statistics"""
+    stats = {
+        'total_ids': NationalID.objects.count(),
+        'active_ids': NationalID.objects.filter(is_active=True).count(),
+        'collected_ids': NationalID.objects.filter(is_collected=True).count(),
+        'pending_collection': NationalID.objects.filter(
+            is_ready_for_collection=True, 
+            is_collected=False
+        ).count(),
+        'printed_ids': NationalID.objects.filter(is_printed=True).count(),
+        'dispatched_ids': NationalID.objects.filter(is_dispatched=True).count(),
+    }
+    
+    # Recent IDs
+    recent_ids = NationalID.objects.select_related('application').order_by('-created_at')[:10]
+    
+    # IDs by county
+    from django.db.models import Count
+    county_stats = NationalID.objects.select_related(
+        'application__county_of_birth'
+    ).values(
+        'application__county_of_birth__name'
+    ).annotate(
+        count=Count('id_number')
+    ).order_by('-count')[:10]
+    
+    context = {
+        'stats': stats,
+        'recent_ids': recent_ids,
+        'county_stats': county_stats,
+    }
+    
+    return render(request, 'national_ids/statistics.html', context)

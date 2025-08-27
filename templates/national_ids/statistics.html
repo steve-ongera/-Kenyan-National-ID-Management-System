@@ -1,0 +1,79 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}National ID Statistics - Dashboard{% endblock %}
+
+{% block content %}
+<div class="pagetitle">
+    <h1><i class="bi bi-bar-chart me-2"></i>National ID Statistics</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="#"><i class="bi bi-house-door"></i> Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'national_ids:national_id_list' %}">National IDs</a></li>
+            <li class="breadcrumb-item active">Statistics</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section dashboard">
+    <!-- Overview Statistics -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="card info-card sales-card">
+                <div class="card-body">
+                    <h5 class="card-title">Total IDs <span>| Overall</span></h5>
+                    <div class="d-flex align-items-center">
+                        <div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
+                            <i class="bi bi-card-text"></i>
+                        </div>
+                        <div class="ps-3">
+                            <h6>{{ stats.total_ids|default:0 }}</h6>
+                            <span class="text-muted small pt-1">National IDs issued</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card info-card revenue-card">
+                <div class="card-body">
+                    <h5 class="card-title">Active IDs <span>| Current</span></h5>
+                    <div class="d-flex align-items-center">
+                        <div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                        <div class="ps-3">
+                            <h6>{{ stats.active_ids|default:0 }}</h6>
+                            <span class="text-success small pt-1 fw-bold">
+                                {% widthratio stats.active_ids stats.total_ids 100 %}% active
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card info-card customers-card">
+                <div class="card-body">
+                    <h5 class="card-title">Collected <span>| Today</span></h5>
+                    <div class="d-flex align-items-center">
+                        <div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
+                            <i class="bi bi-hand-thumbs-up"></i>
+                        </div>
+                        <div class="ps-3">
+                            <h6>{{ stats.collected_ids|default:0 }}</h6>
+                            <span class="text-primary small pt-1 fw-bold">
+                                {% widthratio stats.collected_ids stats.total_ids 100 %}% collected
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card info-card pending-card">
+                <div class="card-body">
+                    <h5 class="card-title">Pending Collection <span>| Waiting</span></h5>

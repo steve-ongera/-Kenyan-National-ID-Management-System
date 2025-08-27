@@ -69,3 +69,220 @@ class BirthCertificateForm(forms.ModelForm):
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "is_verified": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
+
+
+# national_ids/forms.py
+from django import forms
+from django.core.exceptions import ValidationError
+from .models import NationalID, IDApplication, County, SubCounty, DOOffice
+
+
+class NationalIDForm(forms.ModelForm):
+    """Form for creating/editing National ID"""
+    
+    class Meta:
+        model = NationalID
+        fields = [
+            'application', 'full_name', 'date_of_birth', 'place_of_birth', 
+            'gender', 'district_of_birth', 'division_of_birth', 
+            'location_of_birth', 'sub_location', 'clan', 'place_of_issue',
+            'expiry_date', 'photo', 'signature', 'is_active'
+        ]
+        
+        widgets = {
+            'application': forms.Select(attrs={'class': 'form-select'}),
+            'full_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter full name as it appears on birth certificate'
+            }),
+            'date_of_birth': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'place_of_birth': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter place of birth'
+            }),
+            'gender': forms.Select(attrs={'class': 'form-select'}),
+            'district_of_birth': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter district of birth'
+            }),
+            'division_of_birth': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter division of birth'
+            }),
+            'location_of_birth': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter location of birth'
+            }),
+            'sub_location': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter sub-location'
+            }),
+            'clan': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter clan name (optional)'
+            }),
+            'place_of_issue': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter place of issue'
+            }),
+            'expiry_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'photo': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': 'image/*'
+            }),
+            'signature': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': 'image/*'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+        }
+        
+        labels = {
+            'full_name': 'Full Name',
+            'date_of_birth': 'Date of Birth',
+            'place_of_birth': 'Place of Birth',
+            'district_of_birth': 'District of Birth',
+            'division_of_birth': 'Division of Birth',
+            'location_of_birth': 'Location of Birth',
+            'sub_location': 'Sub-Location',
+            'clan': 'Clan Name',
+            'place_of_issue': 'Place of Issue',
+            'expiry_date': 'Expiry Date',
+            'photo': 'Passport Photo',
+            'signature': 'Signature',
+            'is_active': 'Active Status',
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Filter applications that don't have National IDs yet
+        self.fields['application'].queryset = IDApplication.objects.filter(
+            national_id__isnull=True,
+            status='biometrics_taken'
+        ).select_related('birth_certificate')
+        
+        # Make photo required for new IDs
+        if not self.instance.pk:
+            self.fields['photo'].required = True
+    
+    def clean_full_name(self):
+        full_name = self.cleaned_data['full_name']
+        if len(full_name.split()) < 2:
+            raise ValidationError("Full name must contain at least first and last name.")
+        return full_name.upper()
+    
+    def clean_photo(self):
+        photo = self.cleaned_data.get('photo')
+        if photo:
+            if photo.size > 5 * 1024 * 1024:  # 5MB limit
+                raise ValidationError("Photo file size must be less than 5MB.")
+        return photo
+    
+    def clean_signature(self):
+        signature = self.cleaned_data.get('signature')
+        if signature:
+            if signature.size > 2 * 1024 * 1024:  # 2MB limit
+                raise ValidationError("Signature file size must be less than 2MB.")
+        return signature
+
+
+class NationalIDFilterForm(forms.Form):
+    """Form for filtering National IDs"""
+    
+    search = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Search by ID number, name, application number...'
+        })
+    )
+    
+    county = forms.ModelChoiceField(
+        queryset=County.objects.all().order_by('name'),
+        required=False,
+        empty_label="All Counties",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    sub_county = forms.ModelChoiceField(
+        queryset=SubCounty.objects.all().order_by('name'),
+        required=False,
+        empty_label="All Sub Counties",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    gender = forms.ChoiceField(
+        choices=[('', 'All Genders'), ('M', 'Male'), ('F', 'Female')],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    is_active = forms.ChoiceField(
+        choices=[('', 'All'), ('true', 'Active'), ('false', 'Inactive')],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    is_collected = forms.ChoiceField(
+        choices=[('', 'All'), ('true', 'Collected'), ('false', 'Not Collected')],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    is_printed = forms.ChoiceField(
+        choices=[('', 'All'), ('true', 'Printed'), ('false', 'Not Printed')],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    date_from = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        })
+    )
+    
+    date_to = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        })
+    )
+
+
+class BulkActionForm(forms.Form):
+    """Form for bulk actions on National IDs"""
+    
+    ACTION_CHOICES = [
+        ('mark_printed', 'Mark as Printed'),
+        ('mark_dispatched', 'Mark as Dispatched'),
+        ('mark_ready_collection', 'Mark Ready for Collection'),
+        ('deactivate', 'Deactivate'),
+        ('activate', 'Activate'),
+    ]
+    
+    action = forms.ChoiceField(
+        choices=ACTION_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    selected_ids = forms.CharField(
+        widget=forms.HiddenInput()
+    )
+    
+    confirm = forms.BooleanField(
+        required=True,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        label="I confirm that I want to perform this action on the selected National IDs"
+    )

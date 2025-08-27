@@ -1,0 +1,238 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Delete National ID - {{ national_id.full_name }}{% endblock %}
+
+{% block content %}
+<div class="pagetitle">
+    <h1><i class="bi bi-trash me-2"></i>Delete National ID</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="#"><i class="bi bi-house-door"></i> Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'national_ids:national_id_list' %}">National IDs</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'national_ids:national_id_detail' national_id.id_number %}">{{ national_id.id_number }}</a></li>
+            <li class="breadcrumb-item active">Delete</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Confirm Deletion</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <h5><i class="bi bi-exclamation-triangle me-2"></i>Warning: This action cannot be undone!</h5>
+                        <p class="mb-0">You are about to permanently delete this National ID record. This will remove all associated data and files.</p>
+                    </div>
+
+                    <!-- ID Information to be deleted -->
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <h6 class="text-danger mb-3">National ID to be deleted:</h6>
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th width="30%" class="bg-light">ID Number:</th>
+                                    <td><strong>{{ national_id.id_number }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">Serial Number:</th>
+                                    <td>{{ national_id.serial_number }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">Full Name:</th>
+                                    <td><strong>{{ national_id.full_name }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">Date of Birth:</th>
+                                    <td>{{ national_id.date_of_birth|date:"F d, Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">Gender:</th>
+                                    <td>
+                                        <span class="badge {% if national_id.gender == 'M' %}bg-primary{% else %}bg-info{% endif %}">
+                                            {% if national_id.gender == 'M' %}Male{% else %}Female{% endif %}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">Place of Birth:</th>
+                                    <td>{{ national_id.place_of_birth }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">Issue Date:</th>
+                                    <td>{{ national_id.date_of_issue|date:"F d, Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">Status:</th>
+                                    <td>
+                                        <span class="badge {% if national_id.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                                            {% if national_id.is_active %}Active{% else %}Inactive{% endif %}
+                                        </span>
+                                        {% if national_id.is_collected %}
+                                        <span class="badge bg-success">Collected</span>
+                                        {% elif national_id.is_ready_for_collection %}
+                                        <span class="badge bg-warning">Ready for Collection</span>
+                                        {% elif national_id.is_dispatched %}
+                                        <span class="badge bg-info">Dispatched</span>
+                                        {% elif national_id.is_printed %}
+                                        <span class="badge bg-primary">Printed</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Processing</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            {% if national_id.photo %}
+                            <div class="mb-3">
+                                <img src="{{ national_id.photo.url }}" 
+                                     alt="ID Photo" 
+                                     class="img-thumbnail" 
+                                     style="max-width: 120px; max-height: 150px;">
+                                <p class="small text-muted mt-1">Photo (will be deleted)</p>
+                            </div>
+                            {% endif %}
+                            
+                            {% if national_id.signature %}
+                            <div class="mb-3">
+                                <img src="{{ national_id.signature.url }}" 
+                                     alt="Signature" 
+                                     class="img-thumbnail bg-light" 
+                                     style="max-width: 120px; height: 40px;">
+                                <p class="small text-muted mt-1">Signature (will be deleted)</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- What will be deleted -->
+                    <div class="alert alert-warning">
+                        <h6><i class="bi bi-info-circle me-1"></i>The following will be permanently deleted:</h6>
+                        <ul class="mb-0">
+                            <li><strong>National ID Record:</strong> All personal information and ID details</li>
+                            <li><strong>Photo Files:</strong> Passport photo and signature images</li>
+                            <li><strong>Status History:</strong> All status changes and timestamps</li>
+                            <li><strong>Collection Records:</strong> Collection location and staff information</li>
+                            {% if national_id.application %}
+                            <li><strong>Application Link:</strong> Connection to application {{ national_id.application.application_number }}</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+
+                    <!-- Associated records warning -->
+                    {% if national_id.application %}
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-link me-1"></i>Associated Records:</h6>
+                        <p class="mb-2">This ID is linked to:</p>
+                        <ul class="mb-0">
+                            <li><strong>Application:</strong> <a href="{% url 'id_applications:application_detail' national_id.application.application_id %}" target="_blank">{{ national_id.application.application_number }}</a> (will not be deleted)</li>
+                            {% if national_id.application.biometric_data %}
+                            <li><strong>Biometric Data:</strong> Captured on {{ national_id.application.biometric_data.captured_at|date:"M d, Y" }} (will not be deleted)</li>
+                            {% endif %}
+                            {% if national_id.application.waiting_card %}
+                            <li><strong>Waiting Card:</strong> {{ national_id.application.waiting_card.serial_number }} (will not be deleted)</li>
+                            {% endif %}
+                        </ul>
+                        <p class="mb-0 mt-2 small text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Associated application and biometric records will remain intact. Only the National ID record will be deleted.
+                        </p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Deletion form -->
+                    <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                        <a href="{% url 'national_ids:national_id_detail' national_id.id_number %}" 
+                           class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Cancel
+                        </a>
+                        
+                        <form method="post" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger" id="confirmDeleteBtn">
+                                <i class="bi bi-trash me-1"></i>Delete National ID
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Confirmation checkbox -->
+                    <div class="mt-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="confirmDelete" required>
+                            <label class="form-check-label text-danger" for="confirmDelete">
+                                <strong>I understand that this action is permanent and cannot be undone</strong>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const confirmCheckbox = document.getElementById('confirmDelete');
+    const deleteBtn = document.getElementById('confirmDeleteBtn');
+    
+    // Initially disable delete button
+    deleteBtn.disabled = true;
+    
+    // Enable delete button only when checkbox is checked
+    confirmCheckbox.addEventListener('change', function() {
+        deleteBtn.disabled = !this.checked;
+    });
+    
+    // Additional confirmation on form submit
+    deleteBtn.closest('form').addEventListener('submit', function(e) {
+        if (!confirmCheckbox.checked) {
+            e.preventDefault();
+            alert('Please confirm that you understand this action cannot be undone.');
+            return false;
+        }
+        
+        // Final confirmation dialog
+        const confirmed = confirm(
+            `Are you absolutely sure you want to delete National ID ${document.querySelector('strong').textContent}?\n\n` +
+            'This action cannot be undone and will permanently remove:\n' +
+            '• National ID record\n' +
+            '• Photo and signature files\n' +
+            '• All status history\n\n' +
+            'Type "DELETE" to confirm:'
+        );
+        
+        if (!confirmed) {
+            e.preventDefault();
+            return false;
+        }
+        
+        // Show loading state
+        deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Deleting...';
+        deleteBtn.disabled = true;
+    });
+});
+</script>
+
+<style>
+.table th {
+    font-weight: 600;
+}
+
+.alert ul {
+    padding-left: 1.2rem;
+}
+
+.form-check-label {
+    font-size: 0.95rem;
+}
+
+#confirmDeleteBtn:disabled {
+    opacity: 0.5;
+}
+</style>
+{% endblock %}

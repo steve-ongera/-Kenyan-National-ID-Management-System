@@ -1,0 +1,457 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - National ID Management System{% endblock %}
+
+{% block content %}
+<div class="message-container" id="system-messages">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+        <i class="bi {% if message.tags == 'success' %}bi-check-circle{% else %}bi-exclamation-triangle{% endif %} me-2"></i>
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="pagetitle">
+    <h1><i class="bi bi-{% if national_id %}pencil-square{% else %}plus-circle{% endif %} me-2"></i>{{ title }}</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="#"><i class="bi bi-house-door"></i> Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'national_id_list' %}">National IDs</a></li>
+            {% if national_id %}
+            <li class="breadcrumb-item"><a href="{% url 'national_id_detail' national_id.id_number %}">{{ national_id.id_number }}</a></li>
+            <li class="breadcrumb-item active">Edit</li>
+            {% else %}
+            <li class="breadcrumb-item active">Create</li>
+            {% endif %}
+        </ol>
+    </nav>
+</div>
+
+<section class="section">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-form me-2"></i>{{ title }}</h5>
+                </div>
+                <div class="card-body">
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data" id="nationalIdForm">
+                        {% csrf_token %}
+                        
+                        <!-- Application Selection (for new IDs) -->
+                        {% if not national_id %}
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label for="{{ form.application.id_for_label }}" class="form-label">
+                                    {{ form.application.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.application }}
+                                {% if form.application.errors %}
+                                <div class="text-danger small mt-1">{{ form.application.errors }}</div>
+                                {% endif %}
+                                <div class="form-text">Select an approved application with captured biometrics</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Personal Information -->
+                        <h6 class="text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-person me-1"></i>Personal Information
+                        </h6>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label for="{{ form.full_name.id_for_label }}" class="form-label">
+                                    {{ form.full_name.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.full_name }}
+                                {% if form.full_name.errors %}
+                                <div class="text-danger small mt-1">{{ form.full_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.gender.id_for_label }}" class="form-label">
+                                    {{ form.gender.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.gender }}
+                                {% if form.gender.errors %}
+                                <div class="text-danger small mt-1">{{ form.gender.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.date_of_birth.id_for_label }}" class="form-label">
+                                    {{ form.date_of_birth.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.date_of_birth }}
+                                {% if form.date_of_birth.errors %}
+                                <div class="text-danger small mt-1">{{ form.date_of_birth.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.place_of_birth.id_for_label }}" class="form-label">
+                                    {{ form.place_of_birth.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.place_of_birth }}
+                                {% if form.place_of_birth.errors %}
+                                <div class="text-danger small mt-1">{{ form.place_of_birth.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.clan.id_for_label }}" class="form-label">
+                                    {{ form.clan.label }}
+                                </label>
+                                {{ form.clan }}
+                                {% if form.clan.errors %}
+                                <div class="text-danger small mt-1">{{ form.clan.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Birth Location Information -->
+                        <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">
+                            <i class="bi bi-geo-alt me-1"></i>Birth Location
+                        </h6>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.district_of_birth.id_for_label }}" class="form-label">
+                                    {{ form.district_of_birth.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.district_of_birth }}
+                                {% if form.district_of_birth.errors %}
+                                <div class="text-danger small mt-1">{{ form.district_of_birth.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.division_of_birth.id_for_label }}" class="form-label">
+                                    {{ form.division_of_birth.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.division_of_birth }}
+                                {% if form.division_of_birth.errors %}
+                                <div class="text-danger small mt-1">{{ form.division_of_birth.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.location_of_birth.id_for_label }}" class="form-label">
+                                    {{ form.location_of_birth.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.location_of_birth }}
+                                {% if form.location_of_birth.errors %}
+                                <div class="text-danger small mt-1">{{ form.location_of_birth.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.sub_location.id_for_label }}" class="form-label">
+                                    {{ form.sub_location.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.sub_location }}
+                                {% if form.sub_location.errors %}
+                                <div class="text-danger small mt-1">{{ form.sub_location.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- ID Issue Information -->
+                        <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">
+                            <i class="bi bi-card-text me-1"></i>ID Issue Information
+                        </h6>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.place_of_issue.id_for_label }}" class="form-label">
+                                    {{ form.place_of_issue.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.place_of_issue }}
+                                {% if form.place_of_issue.errors %}
+                                <div class="text-danger small mt-1">{{ form.place_of_issue.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.expiry_date.id_for_label }}" class="form-label">
+                                    {{ form.expiry_date.label }}
+                                </label>
+                                {{ form.expiry_date }}
+                                {% if form.expiry_date.errors %}
+                                <div class="text-danger small mt-1">{{ form.expiry_date.errors }}</div>
+                                {% endif %}
+                                <div class="form-text">Leave blank if ID doesn't expire</div>
+                            </div>
+                        </div>
+
+                        <!-- Photo and Signature -->
+                        <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">
+                            <i class="bi bi-image me-1"></i>Photo & Signature
+                        </h6>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.photo.id_for_label }}" class="form-label">
+                                    {{ form.photo.label }} {% if not national_id %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                {{ form.photo }}
+                                {% if form.photo.errors %}
+                                <div class="text-danger small mt-1">{{ form.photo.errors }}</div>
+                                {% endif %}
+                                <div class="form-text">Maximum file size: 5MB. Formats: JPG, PNG</div>
+                                {% if national_id.photo %}
+                                <div class="mt-2">
+                                    <img src="{{ national_id.photo.url }}" alt="Current photo" class="img-thumbnail" style="max-width: 100px;">
+                                    <p class="small text-muted mt-1">Current photo</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.signature.id_for_label }}" class="form-label">
+                                    {{ form.signature.label }}
+                                </label>
+                                {{ form.signature }}
+                                {% if form.signature.errors %}
+                                <div class="text-danger small mt-1">{{ form.signature.errors }}</div>
+                                {% endif %}
+                                <div class="form-text">Maximum file size: 2MB. Formats: JPG, PNG</div>
+                                {% if national_id.signature %}
+                                <div class="mt-2">
+                                    <img src="{{ national_id.signature.url }}" alt="Current signature" class="img-thumbnail bg-light" style="max-width: 100px; height: 50px;">
+                                    <p class="small text-muted mt-1">Current signature</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Status -->
+                        <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">
+                            <i class="bi bi-toggle-on me-1"></i>Status
+                        </h6>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="form-check">
+                                    {{ form.is_active }}
+                                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                        {{ form.is_active.label }}
+                                    </label>
+                                    {% if form.is_active.errors %}
+                                    <div class="text-danger small mt-1">{{ form.is_active.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                            <a href="{% if national_id %}{% url 'national_id_detail' national_id.id_number %}{% else %}{% url 'national_id_list' %}{% endif %}" 
+                               class="btn btn-secondary">
+                                <i class="bi bi-arrow-left me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-1"></i>{{ submit_text }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help and Guidelines -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Guidelines</h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-lightbulb me-1"></i>
+                        <strong>Photo Requirements:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Passport-size photo (35mm × 45mm)</li>
+                            <li>White or light colored background</li>
+                            <li>Front-facing, no hat or sunglasses</li>
+                            <li>Clear, high resolution image</li>
+                            <li>Recent photo (taken within 6 months)</li>
+                        </ul>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        <strong>Important Notes:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>All fields marked with <span class="text-danger">*</span> are required</li>
+                            <li>Full name must match birth certificate exactly</li>
+                            <li>Birth location should be administrative divisions</li>
+                            <li>Photo and signature will be printed on the ID</li>
+                        </ul>
+                    </div>
+
+                    {% if not national_id %}
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle me-1"></i>
+                        <strong>Application Process:</strong>
+                        <ol class="mb-0 mt-2">
+                            <li>Select approved application</li>
+                            <li>Verify personal information</li>
+                            <li>Upload required photos</li>
+                            <li>Review and submit</li>
+                            <li>ID will be queued for printing</li>
+                        </ol>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Preview Card (if editing) -->
+            {% if national_id %}
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0"><i class="bi bi-eye me-2"></i>Current ID Info</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless table-sm">
+                        <tr>
+                            <th>ID Number:</th>
+                            <td>{{ national_id.id_number }}</td>
+                        </tr>
+                        <tr>
+                            <th>Serial:</th>
+                            <td>{{ national_id.serial_number }}</td>
+                        </tr>
+                        <tr>
+                            <th>Issue Date:</th>
+                            <td>{{ national_id.date_of_issue|date:"M d, Y" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Status:</th>
+                            <td>
+                                <span class="badge {% if national_id.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                                    {% if national_id.is_active %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                    
+                    <div class="d-grid">
+                        <a href="{% url 'national_id_detail' national_id.id_number %}" 
+                           class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye me-1"></i>View Full Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // File upload preview
+    const photoInput = document.getElementById('{{ form.photo.id_for_label }}');
+    const signatureInput = document.getElementById('{{ form.signature.id_for_label }}');
+    
+    if (photoInput) {
+        photoInput.addEventListener('change', function(e) {
+            previewImage(e.target, 'photo-preview');
+        });
+    }
+    
+    if (signatureInput) {
+        signatureInput.addEventListener('change', function(e) {
+            previewImage(e.target, 'signature-preview');
+        });
+    }
+    
+    // Form validation
+    document.getElementById('nationalIdForm').addEventListener('submit', function(e) {
+        if (!validateForm()) {
+            e.preventDefault();
+        }
+    });
+    
+    // Auto-fill place of issue based on user location
+    {% if not national_id %}
+    const placeOfIssue = document.getElementById('{{ form.place_of_issue.id_for_label }}');
+    if (placeOfIssue && !placeOfIssue.value) {
+        placeOfIssue.value = 'Nairobi'; // Default or get from user profile
+    }
+    {% endif %}
+});
+
+function previewImage(input, previewId) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            let preview = document.getElementById(previewId);
+            if (!preview) {
+                preview = document.createElement('img');
+                preview.id = previewId;
+                preview.className = 'img-thumbnail mt-2';
+                preview.style.maxWidth = '100px';
+                input.parentNode.appendChild(preview);
+            }
+            preview.src = e.target.result;
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function validateForm() {
+    let isValid = true;
+    
+    // Check required fields
+    const requiredFields = document.querySelectorAll('input[required], select[required]');
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            showFieldError(field, 'This field is required');
+            isValid = false;
+        } else {
+            clearFieldError(field);
+        }
+    });
+    
+    // Validate photo upload (for new IDs)
+    {% if not national_id %}
+    const photoField = document.getElementById('{{ form.photo.id_for_label }}');
+    if (photoField && !photoField.files.length) {
+        showFieldError(photoField, 'Photo is required for new ID');
+        isValid = false;
+    }
+    {% endif %}
+    
+    return isValid;
+}
+
+function showFieldError(field, message) {
+    clearFieldError(field);
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'text-danger small mt-1 field-error';
+    errorDiv.textContent = message;
+    field.parentNode.appendChild(errorDiv);
+    field.classList.add('is-invalid');
+}
+
+function clearFieldError(field) {
+    const existingError = field.parentNode.querySelector('.field-error');
+    if (existingError) {
+        existingError.remove();
+    }
+    field.classList.remove('is-invalid');
+}
+</script>
+{% endblock %}
