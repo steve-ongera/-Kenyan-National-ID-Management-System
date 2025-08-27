@@ -1,0 +1,594 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - National ID Management System{% endblock %}
+{% block content %}
+
+<style>
+    .nav-tabs .nav-link {
+        border-radius: 0;
+        border: 1px solid #dee2e6;
+        border-bottom: 0;
+        margin-right: 2px;
+    }
+    .nav-tabs .nav-link.active {
+        background-color: #0d6efd;
+        color: white;
+        border-color: #0d6efd;
+    }
+    .tab-content {
+        border: 1px solid #dee2e6;
+        border-top: 0;
+        padding: 20px;
+        background: white;
+    }
+    .form-section {
+        margin-bottom: 2rem;
+    }
+    .form-section h6 {
+        color: #6c757d;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    .required {
+        color: #dc3545;
+    }
+    .readonly-field {
+        background-color: #f8f9fa;
+        border-color: #e9ecef;
+    }
+</style>
+
+<div class="message-container" id="system-messages">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+        <i class="bi {% if message.tags == 'success' %}bi-check-circle{% else %}bi-exclamation-triangle{% endif %} me-2"></i>
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="pagetitle">
+    <h1><i class="bi bi-{% if certificate %}pencil-square{% else %}plus-circle{% endif %} me-2"></i>{{ title }}</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="#"><i class="bi bi-house-door"></i> Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'birth_certificates_list' %}">Birth Certificates</a></li>
+            {% if certificate %}
+            <li class="breadcrumb-item"><a href="{% url 'birth_certificate_detail' certificate.certificate_number %}">{{ certificate.certificate_number }}</a></li>
+            <li class="breadcrumb-item active">Update</li>
+            {% else %}
+            <li class="breadcrumb-item active">Create</li>
+            {% endif %}
+        </ol>
+    </nav>
+</div>
+
+<section class="section">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header {% if certificate %}bg-warning text-dark{% else %}bg-success text-white{% endif %}">
+            <h5 class="mb-0">
+                <i class="bi bi-{% if certificate %}pencil-square{% else %}plus-circle{% endif %} me-2"></i>
+                {{ title }}{% if certificate %} - {{ certificate.full_name }}{% endif %}
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <form method="POST" id="certificateForm">
+                {% csrf_token %}
+                
+                <!-- Navigation Tabs -->
+                <ul class="nav nav-tabs" id="certificateTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" type="button" role="tab">
+                            <i class="bi bi-person me-2"></i>Basic Info
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="location-tab" data-bs-toggle="tab" data-bs-target="#location" type="button" role="tab">
+                            <i class="bi bi-geo me-2"></i>Birth Location
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="family-tab" data-bs-toggle="tab" data-bs-target="#family" type="button" role="tab">
+                            <i class="bi bi-people me-2"></i>Family
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="registration-tab" data-bs-toggle="tab" data-bs-target="#registration" type="button" role="tab">
+                            <i class="bi bi-building me-2"></i>Registration
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="citizenship-tab" data-bs-toggle="tab" data-bs-target="#citizenship" type="button" role="tab">
+                            <i class="bi bi-flag me-2"></i>Citizenship
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="certificateTabContent">
+                    <!-- Basic Information Tab -->
+                    <div class="tab-pane fade show active" id="basic" role="tabpanel">
+                        {% if certificate %}
+                        <div class="form-section">
+                            <h6><i class="bi bi-info-circle me-2"></i>Certificate Information (Read-only)</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label class="form-label">Certificate Number</label>
+                                    <input type="text" class="form-control readonly-field" value="{{ certificate.certificate_number }}" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Serial Number</label>
+                                    <input type="text" class="form-control readonly-field" value="{{ certificate.serial_number }}" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Created Date</label>
+                                    <input type="text" class="form-control readonly-field" value="{{ certificate.created_at|date:'F d, Y' }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="form-section">
+                            <h6><i class="bi bi-person me-2"></i>Personal Information</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="certificate_number" class="form-label">Certificate Number <span class="required">*</span></label>
+                                    <input type="text" class="form-control{% if certificate %} readonly-field{% endif %}" id="certificate_number" name="certificate_number" 
+                                           value="{{ form.certificate_number.value|default:'' }}" 
+                                           {% if certificate %}readonly{% else %}required{% endif %}>
+                                    {% if not certificate %}
+                                    <small class="text-muted">Enter unique certificate number (e.g., CERT-2024-001234)</small>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="full_name" class="form-label">Full Name <span class="required">*</span></label>
+                                    <input type="text" class="form-control" id="full_name" name="full_name" 
+                                           value="{{ form.full_name.value|default:'' }}" required>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-4">
+                                    <label for="date_of_birth" class="form-label">Date of Birth <span class="required">*</span></label>
+                                    <input type="date" class="form-control" id="date_of_birth" name="date_of_birth" 
+                                           value="{{ form.date_of_birth.value|default:'' }}" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="gender" class="form-label">Gender <span class="required">*</span></label>
+                                    <select class="form-select" id="gender" name="gender" required>
+                                        <option value="">Select Gender</option>
+                                        <option value="M" {% if form.gender.value == 'M' %}selected{% endif %}>Male</option>
+                                        <option value="F" {% if form.gender.value == 'F' %}selected{% endif %}>Female</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="place_of_birth" class="form-label">Place of Birth <span class="required">*</span></label>
+                                    <input type="text" class="form-control" id="place_of_birth" name="place_of_birth" 
+                                           value="{{ form.place_of_birth.value|default:'' }}" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Birth Location Tab -->
+                    <div class="tab-pane fade" id="location" role="tabpanel">
+                        <div class="form-section">
+                            <h6><i class="bi bi-geo-alt me-2"></i>Birth Location Details</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label for="county_of_birth" class="form-label">County <span class="required">*</span></label>
+                                    <select class="form-select location-select" id="county_of_birth" name="county_of_birth" 
+                                            data-target="sub_county_of_birth" data-url="/api/sub-counties/" required>
+                                        <option value="">Select County</option>
+                                        {% for county in counties %}
+                                        <option value="{{ county.id }}" {% if form.county_of_birth.value == county.id %}selected{% endif %}>
+                                            {{ county.name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="sub_county_of_birth" class="form-label">Sub County <span class="required">*</span></label>
+                                    <select class="form-select location-select" id="sub_county_of_birth" name="sub_county_of_birth" 
+                                            data-target="division_of_birth" data-url="/api/divisions/" required>
+                                        <option value="">Select Sub County</option>
+                                        {% for sub_county in sub_counties %}
+                                        <option value="{{ sub_county.id }}" {% if form.sub_county_of_birth.value == sub_county.id %}selected{% endif %}>
+                                            {{ sub_county.name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="division_of_birth" class="form-label">Division <span class="required">*</span></label>
+                                    <select class="form-select location-select" id="division_of_birth" name="division_of_birth" 
+                                            data-target="location_of_birth" data-url="/api/locations/" required>
+                                        <option value="">Select Division</option>
+                                        {% for division in divisions %}
+                                        <option value="{{ division.id }}" {% if form.division_of_birth.value == division.id %}selected{% endif %}>
+                                            {{ division.name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-4">
+                                    <label for="location_of_birth" class="form-label">Location <span class="required">*</span></label>
+                                    <select class="form-select location-select" id="location_of_birth" name="location_of_birth" 
+                                            data-target="sub_location_of_birth" data-url="/api/sub-locations/" required>
+                                        <option value="">Select Location</option>
+                                        {% for location in locations %}
+                                        <option value="{{ location.id }}" {% if form.location_of_birth.value == location.id %}selected{% endif %}>
+                                            {{ location.name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="sub_location_of_birth" class="form-label">Sub Location <span class="required">*</span></label>
+                                    <select class="form-select location-select" id="sub_location_of_birth" name="sub_location_of_birth" 
+                                            data-target="village_of_birth" data-url="/api/villages/" required>
+                                        <option value="">Select Sub Location</option>
+                                        {% for sub_location in sub_locations %}
+                                        <option value="{{ sub_location.id }}" {% if form.sub_location_of_birth.value == sub_location.id %}selected{% endif %}>
+                                            {{ sub_location.name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="village_of_birth" class="form-label">Village <span class="required">*</span></label>
+                                    <select class="form-select" id="village_of_birth" name="village_of_birth" required>
+                                        <option value="">Select Village</option>
+                                        {% for village in villages %}
+                                        <option value="{{ village.id }}" {% if form.village_of_birth.value == village.id %}selected{% endif %}>
+                                            {{ village.name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Family Information Tab -->
+                    <div class="tab-pane fade" id="family" role="tabpanel">
+                        <div class="form-section">
+                            <h6><i class="bi bi-person-heart me-2"></i>Father Information</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label for="father_name" class="form-label">Father's Full Name</label>
+                                    <input type="text" class="form-control" id="father_name" name="father_name" 
+                                           value="{{ form.father_name.value|default:'' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="father_id" class="form-label">Father's ID Number</label>
+                                    <input type="text" class="form-control" id="father_id" name="father_id" 
+                                           value="{{ form.father_id.value|default:'' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="father_nationality" class="form-label">Father's Nationality</label>
+                                    <input type="text" class="form-control" id="father_nationality" name="father_nationality" 
+                                           value="{{ form.father_nationality.value|default:'KENYAN' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h6><i class="bi bi-person-heart me-2"></i>Mother Information</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label for="mother_name" class="form-label">Mother's Full Name</label>
+                                    <input type="text" class="form-control" id="mother_name" name="mother_name" 
+                                           value="{{ form.mother_name.value|default:'' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="mother_id" class="form-label">Mother's ID Number</label>
+                                    <input type="text" class="form-control" id="mother_id" name="mother_id" 
+                                           value="{{ form.mother_id.value|default:'' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="mother_nationality" class="form-label">Mother's Nationality</label>
+                                    <input type="text" class="form-control" id="mother_nationality" name="mother_nationality" 
+                                           value="{{ form.mother_nationality.value|default:'KENYAN' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h6><i class="bi bi-person-check me-2"></i>Guardian Information (If Applicable)</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label for="guardian_name" class="form-label">Guardian's Full Name</label>
+                                    <input type="text" class="form-control" id="guardian_name" name="guardian_name" 
+                                           value="{{ form.guardian_name.value|default:'' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="guardian_id" class="form-label">Guardian's ID Number</label>
+                                    <input type="text" class="form-control" id="guardian_id" name="guardian_id" 
+                                           value="{{ form.guardian_id.value|default:'' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="guardian_relationship" class="form-label">Relationship to Child</label>
+                                    <input type="text" class="form-control" id="guardian_relationship" name="guardian_relationship" 
+                                           value="{{ form.guardian_relationship.value|default:'' }}" placeholder="e.g., Uncle, Aunt, Grandfather">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Registration Information Tab -->
+                    <div class="tab-pane fade" id="registration" role="tabpanel">
+                        <div class="form-section">
+                            <h6><i class="bi bi-building me-2"></i>Registration Details</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label for="registration_date" class="form-label">Registration Date <span class="required">*</span></label>
+                                    <input type="date" class="form-control" id="registration_date" name="registration_date" 
+                                           value="{{ form.registration_date.value|default:'' }}" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="issuing_office" class="form-label">Issuing Office <span class="required">*</span></label>
+                                    <input type="text" class="form-control" id="issuing_office" name="issuing_office" 
+                                           value="{{ form.issuing_office.value|default:'' }}" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="registrar_name" class="form-label">Registrar Name <span class="required">*</span></label>
+                                    <input type="text" class="form-control" id="registrar_name" name="registrar_name" 
+                                           value="{{ form.registrar_name.value|default:'' }}" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h6><i class="bi bi-toggles me-2"></i>Status Settings</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                                               {% if form.is_active.value %}checked{% endif %}>
+                                        <label class="form-check-label" for="is_active">
+                                            Certificate is Active
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="is_verified" name="is_verified" 
+                                               {% if form.is_verified.value %}checked{% endif %}>
+                                        <label class="form-check-label" for="is_verified">
+                                            Certificate is Verified
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Citizenship Information Tab -->
+                    <div class="tab-pane fade" id="citizenship" role="tabpanel">
+                        <div class="form-section">
+                            <h6><i class="bi bi-flag me-2"></i>Citizenship Status</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="is_kenyan_born" name="is_kenyan_born" 
+                                               {% if form.is_kenyan_born.value %}checked{% endif %} onchange="toggleCitizenshipFields()">
+                                        <label class="form-check-label" for="is_kenyan_born">
+                                            <strong>Born in Kenya</strong>
+                                        </label>
+                                        <small class="form-text text-muted d-block">Check if the person was born within Kenya's borders</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section" id="naturalization_section" style="{% if form.is_kenyan_born.value %}display: none;{% endif %}">
+                            <h6><i class="bi bi-award me-2"></i>Naturalization Details (For Non-Kenyan Born)</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="naturalization_cert" class="form-label">Naturalization Certificate Number</label>
+                                    <input type="text" class="form-control" id="naturalization_cert" name="naturalization_cert" 
+                                           value="{{ form.naturalization_cert.value|default:'' }}">
+                                    <small class="text-muted">Required if not born in Kenya</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="citizenship_acquired_date" class="form-label">Citizenship Acquired Date</label>
+                                    <input type="date" class="form-control" id="citizenship_acquired_date" name="citizenship_acquired_date" 
+                                           value="{{ form.citizenship_acquired_date.value|default:'' }}">
+                                    <small class="text-muted">Date when Kenyan citizenship was acquired</small>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-info mt-3">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Note:</strong> For persons not born in Kenya, naturalization certificate details are required to establish citizenship eligibility.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="card-footer bg-light">
+                    <div class="d-flex justify-content-between">
+                        <a href="{% if certificate %}{% url 'birth_certificate_detail' certificate.certificate_number %}{% else %}{% url 'birth_certificates_list' %}{% endif %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>{% if certificate %}Back to Details{% else %}Back to List{% endif %}
+                        </a>
+                        <div>
+                            <button type="button" class="btn btn-outline-primary me-2" id="prevBtn" onclick="nextPrev(-1)" style="display: none;">
+                                <i class="bi bi-chevron-left me-2"></i>Previous
+                            </button>
+                            <button type="button" class="btn btn-primary me-2" id="nextBtn" onclick="nextPrev(1)">
+                                Next<i class="bi bi-chevron-right ms-2"></i>
+                            </button>
+                            <button type="submit" class="btn btn-{% if certificate %}warning{% else %}success{% endif %}" id="submitBtn" style="display: none;">
+                                <i class="bi bi-{% if certificate %}pencil-square{% else %}plus-circle{% endif %} me-2"></i>{{ button_text }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentTab = 0;
+    const tabs = ['basic', 'location', 'family', 'registration', 'citizenship'];
+    
+    // Location cascade functionality
+    document.querySelectorAll('.location-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const targetId = this.dataset.target;
+            const url = this.dataset.url;
+            const targetSelect = document.getElementById(targetId);
+            
+            if (this.value && targetSelect) {
+                fetch(`${url}${this.value}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        targetSelect.innerHTML = '<option value="">Select...</option>';
+                        data.forEach(item => {
+                            targetSelect.innerHTML += `<option value="${item.id}">${item.name}</option>`;
+                        });
+                        targetSelect.disabled = false;
+                        
+                        // Clear subsequent selects
+                        const allSelects = ['location_of_birth', 'sub_location_of_birth', 'village_of_birth'];
+                        const currentIndex = allSelects.indexOf(targetId);
+                        if (currentIndex !== -1) {
+                            for (let i = currentIndex + 1; i < allSelects.length; i++) {
+                                const nextSelect = document.getElementById(allSelects[i]);
+                                if (nextSelect) {
+                                    nextSelect.innerHTML = '<option value="">Select...</option>';
+                                    nextSelect.disabled = true;
+                                }
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        targetSelect.innerHTML = '<option value="">Error loading data</option>';
+                    });
+            }
+        });
+    });
+    
+    // Tab navigation
+    window.nextPrev = function(n) {
+        const tabElements = document.querySelectorAll('#certificateTabs .nav-link');
+        
+        // Validate current tab before proceeding
+        if (n === 1 && !validateTab(tabs[currentTab])) {
+            return;
+        }
+        
+        // Move to next/previous tab
+        currentTab += n;
+        
+        if (currentTab >= tabs.length) {
+            return;
+        }
+        
+        // Show the correct tab
+        const targetTab = document.getElementById(tabs[currentTab] + '-tab');
+        const tab = new bootstrap.Tab(targetTab);
+        tab.show();
+        
+        // Update button visibility
+        updateButtons();
+    };
+    
+    function updateButtons() {
+        document.getElementById('prevBtn').style.display = currentTab === 0 ? 'none' : 'inline-block';
+        document.getElementById('nextBtn').style.display = currentTab === tabs.length - 1 ? 'none' : 'inline-block';
+        document.getElementById('submitBtn').style.display = currentTab === tabs.length - 1 ? 'inline-block' : 'none';
+    }
+    
+    function validateTab(tabName) {
+        const tabPane = document.getElementById(tabName);
+        const requiredFields = tabPane.querySelectorAll('[required]');
+        let isValid = true;
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            alert(`Please fill in all required fields in this section.`);
+        }
+        
+        return isValid;
+    }
+    
+    // Listen for manual tab clicks
+    document.querySelectorAll('#certificateTabs .nav-link').forEach((tab, index) => {
+        tab.addEventListener('click', function() {
+            currentTab = index;
+            updateButtons();
+        });
+    });
+    
+    // Citizenship status toggle
+    window.toggleCitizenshipFields = function() {
+        const isKenyanBorn = document.getElementById('is_kenyan_born').checked;
+        const naturalizationSection = document.getElementById('naturalization_section');
+        
+        if (isKenyanBorn) {
+            naturalizationSection.style.display = 'none';
+            // Clear naturalization fields when hiding
+            document.getElementById('naturalization_cert').value = '';
+            document.getElementById('citizenship_acquired_date').value = '';
+        } else {
+            naturalizationSection.style.display = 'block';
+        }
+    };
+    
+    // Form validation before submission
+    document.getElementById('certificateForm').addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // Validate all required fields
+        const requiredFields = this.querySelectorAll('[required]');
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        // Validate naturalization fields if not Kenyan born
+        const isKenyanBorn = document.getElementById('is_kenyan_born').checked;
+        if (!isKenyanBorn) {
+            const naturalizationCert = document.getElementById('naturalization_cert');
+            const citizenshipDate = document.getElementById('citizenship_acquired_date');
+            
+            if (!naturalizationCert.value.trim() || !citizenshipDate.value) {
+                alert('Naturalization certificate number and citizenship acquired date are required for non-Kenyan born individuals.');
+                isValid = false;
+            }
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Please correct the highlighted fields before submitting.');
+        }
+    });
+    
+    // Initial setup
+    updateButtons();
+    toggleCitizenshipFields();
+});
+</script>
+{% endblock %}
