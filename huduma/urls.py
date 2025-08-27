@@ -40,4 +40,11 @@ urlpatterns = [
     path('api/divisions/<int:division_id>/locations/', views.get_locations, name='get_locations'),
     path('api/locations/<int:location_id>/sub-locations/', views.get_sub_locations, name='get_sub_locations'),
     path('api/sub-locations/<int:sub_location_id>/villages/', views.get_villages, name='get_villages'),
+
+    # Birth Certificates
+    path('birth-certificates/', views.birth_certificates_list, name='birth_certificates_list'),
+    path('birth-certificates/create/', views.birth_certificate_create, name='birth_certificate_create'),
+    path('birth-certificates/<str:certificate_number>/', views.birth_certificate_detail, name='birth_certificate_detail'),
+    path('birth-certificates/<str:certificate_number>/update/', views.birth_certificate_update, name='birth_certificate_update'),
+    path('birth-certificates/<str:certificate_number>/delete/', views.birth_certificate_delete, name='birth_certificate_delete'),
 ]

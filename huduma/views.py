@@ -870,3 +870,198 @@ def get_villages(request, sub_location_id):
     villages = Village.objects.filter(sub_location_id=sub_location_id).order_by('name')
     data = [{'id': v.id, 'name': v.name} for v in villages]
     return JsonResponse(data, safe=False)
+
+
+
+# views.py
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.core.paginator import Paginator
+from django.db.models import Q
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_http_methods
+from .models import (
+    BirthCertificate, County, SubCounty, Division, 
+    Location, SubLocation, Village
+)
+from .forms import BirthCertificateForm
+import json
+
+
+@login_required
+def birth_certificates_list(request):
+    """List all birth certificates with filtering and search"""
+    
+    # Get filter parameters
+    search_query = request.GET.get('search', '')
+    county_filter = request.GET.get('county', '')
+    sub_county_filter = request.GET.get('sub_county', '')
+    gender_filter = request.GET.get('gender', '')
+    nationality_filter = request.GET.get('nationality', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    is_active_filter = request.GET.get('is_active', '')
+    is_verified_filter = request.GET.get('is_verified', '')
+    
+    # Base queryset
+    certificates = BirthCertificate.objects.select_related(
+        'county_of_birth', 'sub_county_of_birth', 'division_of_birth',
+        'location_of_birth', 'sub_location_of_birth', 'village_of_birth'
+    ).order_by('-created_at')
+    
+    # Apply filters
+    if search_query:
+        certificates = certificates.filter(
+            Q(certificate_number__icontains=search_query) |
+            Q(serial_number__icontains=search_query) |
+            Q(full_name__icontains=search_query) |
+            Q(father_name__icontains=search_query) |
+            Q(mother_name__icontains=search_query) |
+            Q(father_id__icontains=search_query) |
+            Q(mother_id__icontains=search_query)
+        )
+    
+    if county_filter:
+        certificates = certificates.filter(county_of_birth_id=county_filter)
+    
+    if sub_county_filter:
+        certificates = certificates.filter(sub_county_of_birth_id=sub_county_filter)
+    
+    if gender_filter:
+        certificates = certificates.filter(gender=gender_filter)
+    
+    if nationality_filter:
+        if nationality_filter == 'kenyan':
+            certificates = certificates.filter(
+                Q(father_nationality__iexact='KENYAN') | 
+                Q(mother_nationality__iexact='KENYAN')
+            )
+        else:
+            certificates = certificates.filter(
+                ~Q(father_nationality__iexact='KENYAN') & 
+                ~Q(mother_nationality__iexact='KENYAN')
+            )
+    
+    if date_from:
+        certificates = certificates.filter(date_of_birth__gte=date_from)
+    
+    if date_to:
+        certificates = certificates.filter(date_of_birth__lte=date_to)
+    
+    if is_active_filter:
+        certificates = certificates.filter(is_active=is_active_filter == 'true')
+    
+    if is_verified_filter:
+        certificates = certificates.filter(is_verified=is_verified_filter == 'true')
+    
+    # Pagination
+    paginator = Paginator(certificates, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Get filter choices
+    counties = County.objects.all().order_by('name')
+    sub_counties = SubCounty.objects.all().order_by('name')
+    
+    if county_filter:
+        sub_counties = sub_counties.filter(county_id=county_filter)
+    
+    gender_choices = [('M', 'Male'), ('F', 'Female')]
+    nationality_choices = [('kenyan', 'Kenyan'), ('non_kenyan', 'Non-Kenyan')]
+    
+    context = {
+        'certificates': page_obj,
+        'search_query': search_query,
+        'county_filter': county_filter,
+        'sub_county_filter': sub_county_filter,
+        'gender_filter': gender_filter,
+        'nationality_filter': nationality_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'is_active_filter': is_active_filter,
+        'is_verified_filter': is_verified_filter,
+        'counties': counties,
+        'sub_counties': sub_counties,
+        'gender_choices': gender_choices,
+        'nationality_choices': nationality_choices,
+    }
+    
+    return render(request, 'certificates/birth_certificates_list.html', context)
+
+
+@login_required
+def birth_certificate_detail(request, certificate_number):
+    """View birth certificate details"""
+    certificate = get_object_or_404(BirthCertificate, certificate_number=certificate_number)
+    
+    context = {
+        'certificate': certificate,
+    }
+    
+    return render(request, 'certificates/birth_certificate_detail.html', context)
+
+
+@login_required
+def birth_certificate_create(request):
+    """Create new birth certificate"""
+    if request.method == 'POST':
+        form = BirthCertificateForm(request.POST)
+        if form.is_valid():
+            certificate = form.save()
+            messages.success(request, f'Birth certificate {certificate.certificate_number} created successfully.')
+            return redirect('birth_certificate_detail', certificate_number=certificate.certificate_number)
+    else:
+        form = BirthCertificateForm()
+    
+    context = {
+        'form': form,
+        'title': 'Create Birth Certificate',
+        'button_text': 'Create Certificate',
+    }
+    
+    return render(request, 'certificates/birth_certificate_form.html', context)
+
+
+@login_required
+def birth_certificate_update(request, certificate_number):
+    """Update birth certificate"""
+    certificate = get_object_or_404(BirthCertificate, certificate_number=certificate_number)
+    
+    if request.method == 'POST':
+        form = BirthCertificateForm(request.POST, instance=certificate)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Birth certificate {certificate.certificate_number} updated successfully.')
+            return redirect('birth_certificate_detail', certificate_number=certificate.certificate_number)
+    else:
+        form = BirthCertificateForm(instance=certificate)
+    
+    context = {
+        'form': form,
+        'certificate': certificate,
+        'title': 'Update Birth Certificate',
+        'button_text': 'Update Certificate',
+    }
+    
+    return render(request, 'certificates/birth_certificate_form.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def birth_certificate_delete(request, certificate_number):
+    """Delete birth certificate"""
+    certificate = get_object_or_404(BirthCertificate, certificate_number=certificate_number)
+    
+    # Check if certificate is being used in any applications
+    if hasattr(certificate, 'idapplication_set') and certificate.idapplication_set.exists():
+        messages.error(request, 'Cannot delete certificate. It is being used in ID applications.')
+        return redirect('birth_certificate_detail', certificate_number=certificate.certificate_number)
+    
+    certificate_number_copy = certificate.certificate_number
+    certificate.delete()
+    messages.success(request, f'Birth certificate {certificate_number_copy} deleted successfully.')
+    
+    return redirect('birth_certificates_list')
+
+
