@@ -26,7 +26,7 @@ urlpatterns = [
     path('api/dashboard/applications-trend/', views.dashboard_api_applications_trend, name='dashboard_api_applications_trend'),
 
      path('applications/', views.id_applications_list, name='applications_list'),
-    path('create/', views.id_application_create, name='applications_create'),
+    path('create/applications/', views.id_application_create, name='applications_create'),
     path('<uuid:application_id>/', views.id_application_detail, name='applications_detail'),
     path('<uuid:application_id>/update/', views.id_application_update, name='applications_update'),
     path('<uuid:application_id>/delete/', views.id_application_delete, name='applications_delete'),
