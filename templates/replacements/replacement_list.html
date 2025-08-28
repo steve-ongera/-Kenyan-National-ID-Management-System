@@ -1,0 +1,368 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Replacement ID Applications - National ID Management System{% endblock %}
+
+{% block content %}
+<div class="message-container" id="system-messages">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+        <i class="bi {% if message.tags == 'success' %}bi-check-circle{% else %}bi-exclamation-triangle{% endif %} me-2"></i>
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="pagetitle">
+    <h1><i class="bi bi-arrow-clockwise me-2"></i>Replacement ID Applications</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="#"><i class="bi bi-house-door"></i> Home</a></li>
+            <li class="breadcrumb-item active">Replacement Applications</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section">
+    <div class="row">
+        <div class="col-lg-12">
+            <!-- Filters Card -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="bi bi-funnel me-2"></i>Search & Filters</h6>
+                </div>
+                <div class="card-body">
+                    <form method="GET" id="filterForm">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label for="search" class="form-label">Search</label>
+                                <input type="text" name="search" id="search" class="form-control" 
+                                       placeholder="Application number, name, ID number..." 
+                                       value="{{ search_query }}">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="status" class="form-label">Status</label>
+                                <select name="status" id="status" class="form-select">
+                                    <option value="">All Statuses</option>
+                                    {% for code, display in status_choices %}
+                                    <option value="{{ code }}" {% if code == status_filter %}selected{% endif %}>
+                                        {{ display }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="replacement_reason" class="form-label">Reason</label>
+                                <select name="replacement_reason" id="replacement_reason" class="form-select">
+                                    <option value="">All Reasons</option>
+                                    {% for code, display in reason_choices %}
+                                    <option value="{{ code }}" {% if code == reason_filter %}selected{% endif %}>
+                                        {{ display }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="county" class="form-label">County</label>
+                                <select name="county" id="county" class="form-select">
+                                    <option value="">All Counties</option>
+                                    {% for county in counties %}
+                                    <option value="{{ county.id }}" {% if county.id|stringformat:"s" == county_filter %}selected{% endif %}>
+                                        {{ county.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="entry_point" class="form-label">Entry Point</label>
+                                <select name="entry_point" id="entry_point" class="form-select">
+                                    <option value="">All Entry Points</option>
+                                    {% for code, display in entry_point_choices %}
+                                    <option value="{{ code }}" {% if code == entry_point_filter %}selected{% endif %}>
+                                        {{ display }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-1">
+                                <label for="gender" class="form-label">Gender</label>
+                                <select name="gender" id="gender" class="form-select">
+                                    <option value="">All</option>
+                                    {% for code, display in gender_choices %}
+                                    <option value="{{ code }}" {% if code == gender_filter %}selected{% endif %}>
+                                        {{ display }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="fee_paid" class="form-label">Fee Status</label>
+                                <select name="fee_paid" id="fee_paid" class="form-select">
+                                    <option value="">All</option>
+                                    <option value="true" {% if fee_paid_filter == 'true' %}selected{% endif %}>Paid</option>
+                                    <option value="false" {% if fee_paid_filter == 'false' %}selected{% endif %}>Unpaid</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="date_from" class="form-label">Date From</label>
+                                <input type="date" name="date_from" id="date_from" class="form-control" value="{{ date_from }}">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="date_to" class="form-label">Date To</label>
+                                <input type="date" name="date_to" id="date_to" class="form-control" value="{{ date_to }}">
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <button type="submit" class="btn btn-warning me-2">
+                                    <i class="bi bi-search me-1"></i>Filter
+                                </button>
+                                <a href="{% url 'replacement_id_list' %}" class="btn btn-outline-secondary me-2">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>Clear
+                                </a>
+                                <button type="button" class="btn btn-success" data-bs-toggle="collapse" data-bs-target="#bulkActions">
+                                    <i class="bi bi-check2-all me-1"></i>Bulk Actions
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Applications Table Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0"><i class="bi bi-list-ul me-2"></i>Replacement ID Applications</h5>
+                        <a href="{% url 'replacement_id_create' %}" class="btn btn-dark">
+                            <i class="bi bi-plus-circle me-2"></i>New Application
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th><input type="checkbox" id="selectAll"></th>
+                                    <th>Application #</th>
+                                    <th>Applicant</th>
+                                    <th>Previous ID</th>
+                                    <th>Reason</th>
+                                    <th>Police OB</th>
+                                    <th>Fee Status</th>
+                                    <th>Status</th>
+                                    <th>Entry Point</th>
+                                    <th>Date Applied</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for application in applications %}
+                                <tr>
+                                    <td><input type="checkbox" class="row-checkbox" value="{{ application.application_id }}"></td>
+                                    <td>
+                                        <strong>{{ application.application_number }}</strong>
+                                        <div class="text-muted small">{{ application.applicant.username }}</div>
+                                    </td>
+                                    <td>
+                                        <strong>{{ application.full_name }}</strong>
+                                        <div class="text-muted small">{{ application.phone_number }}</div>
+                                    </td>
+                                    <td>
+                                        <code>{{ application.previous_id_number }}</code>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if application.replacement_reason == 'lost' %}bg-warning{% elif application.replacement_reason == 'stolen' %}bg-danger{% elif application.replacement_reason == 'damaged' %}bg-info{% else %}bg-secondary{% endif %}">
+                                            {{ application.get_replacement_reason_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <strong>{{ application.police_ob_number }}</strong>
+                                        <div class="text-muted small">{{ application.police_station }}</div>
+                                    </td>
+                                    <td>
+                                        {% if application.fee_paid %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle me-1"></i>Paid
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-x-circle me-1"></i>Unpaid
+                                        </span>
+                                        {% endif %}
+                                        <div class="text-muted small">KES {{ application.replacement_fee }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if application.status == 'started' %}bg-secondary
+                                            {% elif application.status == 'chief_review' %}bg-warning
+                                            {% elif application.status == 'chief_approved' %}bg-info
+                                            {% elif application.status == 'do_approved' %}bg-primary
+                                            {% elif application.status == 'ready_for_collection' %}bg-success
+                                            {% elif application.status == 'collected' %}bg-dark
+                                            {% elif 'rejected' in application.status %}bg-danger
+                                            {% else %}bg-warning
+                                            {% endif %}">
+                                            {{ application.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if application.entry_point == 'chief' %}bg-info
+                                            {% elif application.entry_point == 'huduma' %}bg-primary
+                                            {% else %}bg-success
+                                            {% endif %}">
+                                            {{ application.get_entry_point_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ application.created_at|date:"M d, Y" }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'replacement_id_detail' application.application_id %}" 
+                                               class="btn btn-sm btn-outline-primary" 
+                                               title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{% url 'replacement_id_update' application.application_id %}" 
+                                               class="btn btn-sm btn-outline-secondary" 
+                                               title="Edit Application">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-outline-danger" 
+                                                    title="Delete Application"
+                                                    onclick="confirmDelete('{{ application.application_id }}', '{{ application.full_name }}', '{{ application.application_number }}')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="11" class="text-center py-4">
+                                        <i class="bi bi-inbox display-1 text-muted"></i>
+                                        <p class="text-muted mt-3">No replacement ID applications found</p>
+                                        <a href="{% url 'replacement_id_create' %}" class="btn btn-warning">
+                                            <i class="bi bi-plus-circle me-2"></i>Create First Application
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if applications.paginator.num_pages > 1 %}
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div class="text-muted">
+                            Showing {{ applications.start_index }} to {{ applications.end_index }} of {{ applications.paginator.count }} entries
+                        </div>
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination">
+                                {% if applications.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="First">
+                                        <span aria-hidden="true">&laquo;&laquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ applications.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Previous">
+                                        <span aria-hidden="true">&laquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                                
+                                {% for num in applications.paginator.page_range %}
+                                    {% if applications.number == num %}
+                                    <li class="page-item active">
+                                        <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                                    </li>
+                                    {% elif num > applications.number|add:'-3' and num < applications.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                                    </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if applications.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ applications.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Next">
+                                        <span aria-hidden="true">&raquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ applications.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Last">
+                                        <span aria-hidden="true">&raquo;&raquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the replacement ID application <strong id="applicationNumber"></strong> for <strong id="applicantName"></strong>?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete Application</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Auto-submit filters on change
+    document.querySelectorAll('#filterForm select, #filterForm input[type="date"]').forEach(element => {
+        element.addEventListener('change', function() {
+            document.getElementById('filterForm').submit();
+        });
+    });
+
+    // Search with delay
+    let searchTimeout;
+    document.getElementById('search').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            document.getElementById('filterForm').submit();
+        }, 500);
+    });
+
+    // Select all checkbox functionality
+    document.getElementById('selectAll').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+    });
+});
+
+function confirmDelete(applicationId, applicantName, applicationNumber) {
+    document.getElementById('applicantName').textContent = applicantName;
+    document.getElementById('applicationNumber').textContent = applicationNumber;
+    document.getElementById('deleteForm').action = `/replacements/${applicationId}/delete/`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}

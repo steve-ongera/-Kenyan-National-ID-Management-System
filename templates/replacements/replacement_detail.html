@@ -1,0 +1,540 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Replacement Application {{ application.application_number }} - National ID Management System{% endblock %}
+
+{% block content %}
+<div class="message-container" id="system-messages">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+        <i class="bi {% if message.tags == 'success' %}bi-check-circle{% else %}bi-exclamation-triangle{% endif %} me-2"></i>
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="pagetitle">
+    <h1><i class="bi bi-file-earmark-person me-2"></i>Replacement Application Details</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="#"><i class="bi bi-house-door"></i> Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'replacement_id_list' %}">Replacement Applications</a></li>
+            <li class="breadcrumb-item active">{{ application.application_number }}</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section">
+    <div class="row">
+        <!-- Application Summary Card -->
+        <div class="col-lg-12 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-info-circle me-2"></i>Application Summary
+                        </h5>
+                        <div class="btn-group">
+                            <a href="{% url 'replacement_id_update' application.application_id %}" class="btn btn-outline-dark btn-sm">
+                                <i class="bi bi-pencil me-1"></i>Edit
+                            </a>
+                            <button type="button" class="btn btn-outline-danger btn-sm" 
+                                    onclick="confirmDelete('{{ application.application_id }}', '{{ application.full_name }}', '{{ application.application_number }}')">
+                                <i class="bi bi-trash me-1"></i>Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="40%">Application Number:</th>
+                                    <td><strong>{{ application.application_number }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>Application Type:</th>
+                                    <td><span class="badge bg-warning">{{ application.get_application_type_display }}</span></td>
+                                </tr>
+                                <tr>
+                                    <th>Status:</th>
+                                    <td>
+                                        <span class="badge 
+                                            {% if application.status == 'started' %}bg-secondary
+                                            {% elif application.status == 'chief_review' %}bg-warning
+                                            {% elif application.status == 'chief_approved' %}bg-info
+                                            {% elif application.status == 'do_approved' %}bg-primary
+                                            {% elif application.status == 'ready_for_collection' %}bg-success
+                                            {% elif application.status == 'collected' %}bg-dark
+                                            {% elif 'rejected' in application.status %}bg-danger
+                                            {% else %}bg-warning
+                                            {% endif %}">
+                                            {{ application.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Entry Point:</th>
+                                    <td>
+                                        <span class="badge 
+                                            {% if application.entry_point == 'chief' %}bg-info
+                                            {% elif application.entry_point == 'huduma' %}bg-primary
+                                            {% else %}bg-success
+                                            {% endif %}">
+                                            {{ application.get_entry_point_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Date Applied:</th>
+                                    <td>{{ application.created_at|date:"F d, Y \a\t H:i" }}</td>
+                                </tr>
+                                {% if application.submitted_at %}
+                                <tr>
+                                    <th>Date Submitted:</th>
+                                    <td>{{ application.submitted_at|date:"F d, Y \a\t H:i" }}</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="40%">Previous ID Number:</th>
+                                    <td><code>{{ application.previous_id_number }}</code></td>
+                                </tr>
+                                <tr>
+                                    <th>Replacement Reason:</th>
+                                    <td>
+                                        <span class="badge {% if application.replacement_reason == 'lost' %}bg-warning{% elif application.replacement_reason == 'stolen' %}bg-danger{% elif application.replacement_reason == 'damaged' %}bg-info{% else %}bg-secondary{% endif %}">
+                                            {{ application.get_replacement_reason_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Police OB Number:</th>
+                                    <td><strong>{{ application.police_ob_number }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>Police Station:</th>
+                                    <td>{{ application.police_station }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Fee Status:</th>
+                                    <td>
+                                        {% if application.fee_paid %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle me-1"></i>Paid (KES {{ application.replacement_fee }})
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-x-circle me-1"></i>Unpaid (KES {{ application.replacement_fee }})
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Personal Information Card -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="bi bi-person me-2"></i>Personal Information</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <th width="40%">Full Name:</th>
+                            <td><strong>{{ application.full_name }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Date of Birth:</th>
+                            <td>{{ application.date_of_birth|date:"F d, Y" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Gender:</th>
+                            <td>
+                                <span class="badge {% if application.gender == 'M' %}bg-primary{% else %}bg-info{% endif %}">
+                                    {% if application.gender == 'M' %}Male{% else %}Female{% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Place of Birth:</th>
+                            <td>{{ application.place_of_birth }}</td>
+                        </tr>
+                        <tr>
+                            <th>Clan:</th>
+                            <td>{{ application.clan_name|default:"Not specified" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Information Card -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="bi bi-telephone me-2"></i>Contact Information</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <th width="40%">Phone Number:</th>
+                            <td><strong>{{ application.phone_number }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Alternative Phone:</th>
+                            <td>{{ application.alternative_phone|default:"Not provided" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Email:</th>
+                            <td>{{ application.email|default:"Not provided" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Postal Address:</th>
+                            <td>{{ application.postal_address|default:"Not provided" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Family Information Card -->
+        <div class="col-lg-12 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="bi bi-people me-2"></i>Family Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Father's Information</h6>
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="30%">Name:</th>
+                                    <td>{{ application.father_name|default:"Not provided" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>ID Number:</th>
+                                    <td>{{ application.father_id|default:"Not provided" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Mother's Information</h6>
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="30%">Name:</th>
+                                    <td>{{ application.mother_name|default:"Not provided" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>ID Number:</th>
+                                    <td>{{ application.mother_id|default:"Not provided" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    {% if application.guardian_name %}
+                    <hr>
+                    <h6 class="text-muted">Guardian Information</h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>Name:</strong> {{ application.guardian_name }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>ID Number:</strong> {{ application.guardian_id|default:"Not provided" }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Relationship:</strong> {{ application.guardian_relationship|default:"Not specified" }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Birth Location Card -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0"><i class="bi bi-geo-alt me-2"></i>Birth Location</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <th width="40%">County:</th>
+                            <td>{{ application.county_of_birth.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Sub County:</th>
+                            <td>{{ application.sub_county_of_birth.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Division:</th>
+                            <td>{{ application.division_of_birth.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Location:</th>
+                            <td>{{ application.location_of_birth.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Sub Location:</th>
+                            <td>{{ application.sub_location_of_birth.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Village:</th>
+                            <td>{{ application.village_of_birth.name }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Address Card -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h6 class="mb-0"><i class="bi bi-house me-2"></i>Current Address</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <th width="40%">County:</th>
+                            <td>{{ application.current_county.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Sub County:</th>
+                            <td>{{ application.current_sub_county.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Division:</th>
+                            <td>{{ application.current_division.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Location:</th>
+                            <td>{{ application.current_location.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Sub Location:</th>
+                            <td>{{ application.current_sub_location.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Village:</th>
+                            <td>{{ application.current_village.name }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Processing Offices Card -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="bi bi-building me-2"></i>Processing Offices</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        {% if application.chief_office %}
+                        <tr>
+                            <th width="40%">Chief Office:</th>
+                            <td>{{ application.chief_office.name }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if application.do_office %}
+                        <tr>
+                            <th>DO Office:</th>
+                            <td>{{ application.do_office.name }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if application.huduma_centre %}
+                        <tr>
+                            <th>Huduma Centre:</th>
+                            <td>{{ application.huduma_centre.name }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status History Card -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Status History</h6>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        {% for history in application.status_history.all %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-primary"></div>
+                            <div class="timeline-content">
+                                <h6 class="timeline-title">{{ history.get_new_status_display }}</h6>
+                                <p class="timeline-text">
+                                    Changed by: {{ history.changed_by.get_full_name|default:history.changed_by.username }}<br>
+                                    Date: {{ history.timestamp|date:"F d, Y \a\t H:i" }}
+                                    {% if history.change_reason %}
+                                    <br>Reason: {{ history.change_reason }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted">No status changes recorded yet.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Birth Certificate Details Card -->
+        <div class="col-lg-12 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Birth Certificate Details</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="40%">Certificate Number:</th>
+                                    <td><strong>{{ application.birth_certificate.certificate_number }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>Serial Number:</th>
+                                    <td>{{ application.birth_certificate.serial_number }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Registration Date:</th>
+                                    <td>{{ application.birth_certificate.registration_date|date:"F d, Y" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th width="40%">Issuing Office:</th>
+                                    <td>{{ application.birth_certificate.issuing_office }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Registrar:</th>
+                                    <td>{{ application.birth_certificate.registrar_name }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Status:</th>
+                                    <td>
+                                        {% if application.birth_certificate.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Inactive</span>
+                                        {% endif %}
+                                        {% if application.birth_certificate.is_verified %}
+                                        <span class="badge bg-primary">Verified</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the replacement ID application <strong id="applicationNumber"></strong> for <strong id="applicantName"></strong>?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete Application</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(applicationId, applicantName, applicationNumber) {
+    document.getElementById('applicantName').textContent = applicantName;
+    document.getElementById('applicationNumber').textContent = applicationNumber;
+    document.getElementById('deleteForm').action = `/replacements/${applicationId}/delete/`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-item {
+    position: relative;
+    padding-bottom: 20px;
+}
+
+.timeline-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: -21px;
+    top: 20px;
+    height: calc(100% - 10px);
+    width: 2px;
+    background-color: #e9ecef;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -25px;
+    top: 5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #007bff;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #007bff;
+}
+
+.timeline-title {
+    margin: 0 0 5px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #495057;
+}
+
+.timeline-text {
+    margin: 0;
+    font-size: 13px;
+    color: #6c757d;
+}
+</style>
+{% endblock %}
