@@ -1405,3 +1405,296 @@ def national_id_statistics(request):
     }
     
     return render(request, 'national_ids/statistics.html', context)
+
+
+
+# views.py
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db.models import Q
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.forms import ModelForm, forms
+from django import forms
+from .models import (
+    IDApplication, BirthCertificate, County, SubCounty, Division, 
+    Location, SubLocation, Village, ChiefOffice, DOOffice, HudumaCentre,
+    CustomUser
+)
+
+
+class ReplacementIDApplicationForm(ModelForm):
+    class Meta:
+        model = IDApplication
+        fields = [
+            'birth_certificate', 'full_name', 'date_of_birth', 'gender',
+            'county_of_birth', 'sub_county_of_birth', 'division_of_birth',
+            'location_of_birth', 'sub_location_of_birth', 'village_of_birth',
+            'current_county', 'current_sub_county', 'current_division',
+            'current_location', 'current_sub_location', 'current_village',
+            'clan_name', 'father_name', 'father_id', 'mother_name', 'mother_id',
+            'guardian_name', 'guardian_id', 'guardian_relationship',
+            'phone_number', 'alternative_phone', 'email', 'postal_address',
+            'previous_id_number', 'police_ob_number', 'police_station',
+            'replacement_reason', 'replacement_fee', 'chief_office',
+            'huduma_centre', 'entry_point'
+        ]
+        
+        widgets = {
+            'birth_certificate': forms.Select(attrs={'class': 'form-select'}),
+            'full_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'date_of_birth': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'gender': forms.Select(attrs={'class': 'form-select'}),
+            'county_of_birth': forms.Select(attrs={'class': 'form-select'}),
+            'sub_county_of_birth': forms.Select(attrs={'class': 'form-select'}),
+            'division_of_birth': forms.Select(attrs={'class': 'form-select'}),
+            'location_of_birth': forms.Select(attrs={'class': 'form-select'}),
+            'sub_location_of_birth': forms.Select(attrs={'class': 'form-select'}),
+            'village_of_birth': forms.Select(attrs={'class': 'form-select'}),
+            'current_county': forms.Select(attrs={'class': 'form-select'}),
+            'current_sub_county': forms.Select(attrs={'class': 'form-select'}),
+            'current_division': forms.Select(attrs={'class': 'form-select'}),
+            'current_location': forms.Select(attrs={'class': 'form-select'}),
+            'current_sub_location': forms.Select(attrs={'class': 'form-select'}),
+            'current_village': forms.Select(attrs={'class': 'form-select'}),
+            'clan_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'father_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'father_id': forms.TextInput(attrs={'class': 'form-control'}),
+            'mother_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'mother_id': forms.TextInput(attrs={'class': 'form-control'}),
+            'guardian_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'guardian_id': forms.TextInput(attrs={'class': 'form-control'}),
+            'guardian_relationship': forms.TextInput(attrs={'class': 'form-control'}),
+            'phone_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'alternative_phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'postal_address': forms.TextInput(attrs={'class': 'form-control'}),
+            'previous_id_number': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
+            'police_ob_number': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
+            'police_station': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
+            'replacement_reason': forms.Select(attrs={'class': 'form-select', 'required': True}),
+            'replacement_fee': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'chief_office': forms.Select(attrs={'class': 'form-select'}),
+            'huduma_centre': forms.Select(attrs={'class': 'form-select'}),
+            'entry_point': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['birth_certificate'].queryset = BirthCertificate.objects.filter(is_active=True)
+        self.fields['county_of_birth'].queryset = County.objects.all()
+        self.fields['current_county'].queryset = County.objects.all()
+        self.fields['chief_office'].queryset = ChiefOffice.objects.filter(is_active=True)
+        self.fields['huduma_centre'].queryset = HudumaCentre.objects.filter(is_active=True)
+
+
+@login_required
+def replacement_id_list(request):
+    """List all replacement ID applications with search and filtering"""
+    applications = IDApplication.objects.filter(application_type='replacement').select_related(
+        'applicant', 'birth_certificate', 'county_of_birth', 'sub_county_of_birth',
+        'current_county', 'current_sub_county', 'chief_office', 'huduma_centre'
+    ).order_by('-created_at')
+    
+    # Search functionality
+    search_query = request.GET.get('search', '')
+    if search_query:
+        applications = applications.filter(
+            Q(application_number__icontains=search_query) |
+            Q(full_name__icontains=search_query) |
+            Q(previous_id_number__icontains=search_query) |
+            Q(phone_number__icontains=search_query) |
+            Q(police_ob_number__icontains=search_query) |
+            Q(applicant__username__icontains=search_query)
+        )
+    
+    # Filters
+    status_filter = request.GET.get('status')
+    if status_filter:
+        applications = applications.filter(status=status_filter)
+    
+    reason_filter = request.GET.get('replacement_reason')
+    if reason_filter:
+        applications = applications.filter(replacement_reason=reason_filter)
+    
+    county_filter = request.GET.get('county')
+    if county_filter:
+        applications = applications.filter(current_county_id=county_filter)
+    
+    entry_point_filter = request.GET.get('entry_point')
+    if entry_point_filter:
+        applications = applications.filter(entry_point=entry_point_filter)
+    
+    fee_paid_filter = request.GET.get('fee_paid')
+    if fee_paid_filter:
+        fee_paid_bool = fee_paid_filter == 'true'
+        applications = applications.filter(fee_paid=fee_paid_bool)
+    
+    gender_filter = request.GET.get('gender')
+    if gender_filter:
+        applications = applications.filter(gender=gender_filter)
+    
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    if date_from:
+        applications = applications.filter(created_at__date__gte=date_from)
+    if date_to:
+        applications = applications.filter(created_at__date__lte=date_to)
+    
+    # Pagination
+    paginator = Paginator(applications, 20)
+    page_number = request.GET.get('page')
+    applications_page = paginator.get_page(page_number)
+    
+    # Get choices for filters
+    status_choices = IDApplication.APPLICATION_STATUS
+    reason_choices = IDApplication.REPLACEMENT_REASONS
+    entry_point_choices = IDApplication.ENTRY_POINTS
+    gender_choices = [('M', 'Male'), ('F', 'Female')]
+    counties = County.objects.all()
+    
+    context = {
+        'applications': applications_page,
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'reason_filter': reason_filter,
+        'county_filter': county_filter,
+        'entry_point_filter': entry_point_filter,
+        'fee_paid_filter': fee_paid_filter,
+        'gender_filter': gender_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'status_choices': status_choices,
+        'reason_choices': reason_choices,
+        'entry_point_choices': entry_point_choices,
+        'gender_choices': gender_choices,
+        'counties': counties,
+    }
+    
+    return render(request, 'replacements/replacement_list.html', context)
+
+
+@login_required
+def replacement_id_detail(request, application_id):
+    """Detail view for replacement ID application"""
+    application = get_object_or_404(
+        IDApplication.objects.select_related(
+            'applicant', 'birth_certificate', 'county_of_birth', 'sub_county_of_birth',
+            'division_of_birth', 'location_of_birth', 'sub_location_of_birth', 'village_of_birth',
+            'current_county', 'current_sub_county', 'current_division', 'current_location',
+            'current_sub_location', 'current_village', 'chief_office', 'do_office', 'huduma_centre'
+        ).prefetch_related('status_history', 'application_documents', 'notifications'),
+        application_id=application_id,
+        application_type='replacement'
+    )
+    
+    context = {
+        'application': application,
+    }
+    
+    return render(request, 'replacements/replacement_detail.html', context)
+
+
+@login_required
+def replacement_id_create(request):
+    """Create new replacement ID application"""
+    if request.method == 'POST':
+        form = ReplacementIDApplicationForm(request.POST)
+        if form.is_valid():
+            application = form.save(commit=False)
+            application.applicant = request.user
+            application.application_type = 'replacement'
+            application.status = 'started'
+            application.save()
+            
+            messages.success(request, f'Replacement ID application {application.application_number} created successfully.')
+            return redirect('replacement_id_detail', application_id=application.application_id)
+    else:
+        form = ReplacementIDApplicationForm()
+    
+    context = {
+        'form': form,
+        'action': 'Create',
+    }
+    
+    return render(request, 'replacements/replacement_form.html', context)
+
+
+@login_required
+def replacement_id_update(request, application_id):
+    """Update replacement ID application"""
+    application = get_object_or_404(IDApplication, application_id=application_id, application_type='replacement')
+    
+    if request.method == 'POST':
+        form = ReplacementIDApplicationForm(request.POST, instance=application)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Replacement ID application {application.application_number} updated successfully.')
+            return redirect('replacement_id_detail', application_id=application.application_id)
+    else:
+        form = ReplacementIDApplicationForm(instance=application)
+    
+    context = {
+        'form': form,
+        'application': application,
+        'action': 'Update',
+    }
+    
+    return render(request, 'replacements/replacement_form.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def replacement_id_delete(request, application_id):
+    """Delete replacement ID application"""
+    application = get_object_or_404(IDApplication, application_id=application_id, application_type='replacement')
+    application_number = application.application_number
+    applicant_name = application.full_name
+    
+    application.delete()
+    
+    messages.success(request, f'Replacement ID application {application_number} for {applicant_name} has been deleted successfully.')
+    return redirect('replacement_id_list')
+
+
+# AJAX Views for cascading dropdowns
+@login_required
+def ajax_sub_counties(request):
+    """Get sub-counties for a county via AJAX"""
+    county_id = request.GET.get('county_id')
+    sub_counties = SubCounty.objects.filter(county_id=county_id).values('id', 'name')
+    return JsonResponse({'sub_counties': list(sub_counties)})
+
+
+@login_required
+def ajax_divisions(request):
+    """Get divisions for a sub-county via AJAX"""
+    sub_county_id = request.GET.get('sub_county_id')
+    divisions = Division.objects.filter(sub_county_id=sub_county_id).values('id', 'name')
+    return JsonResponse({'divisions': list(divisions)})
+
+
+@login_required
+def ajax_locations(request):
+    """Get locations for a division via AJAX"""
+    division_id = request.GET.get('division_id')
+    locations = Location.objects.filter(division_id=division_id).values('id', 'name')
+    return JsonResponse({'locations': list(locations)})
+
+
+@login_required
+def ajax_sub_locations(request):
+    """Get sub-locations for a location via AJAX"""
+    location_id = request.GET.get('location_id')
+    sub_locations = SubLocation.objects.filter(location_id=location_id).values('id', 'name')
+    return JsonResponse({'sub_locations': list(sub_locations)})
+
+
+@login_required
+def ajax_villages(request):
+    """Get villages for a sub-location via AJAX"""
+    sub_location_id = request.GET.get('sub_location_id')
+    villages = Village.objects.filter(sub_location_id=sub_location_id).values('id', 'name')
+    return JsonResponse({'villages': list(villages)})

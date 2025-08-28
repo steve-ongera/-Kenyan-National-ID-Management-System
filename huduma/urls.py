@@ -64,4 +64,18 @@ urlpatterns = [
     
     # AJAX endpoints
     path('ajax/sub-counties/', views.ajax_sub_counties, name='ajax_sub_counties'),
+
+    # Replacement ID Application URLs
+    path('replacements/', views.replacement_id_list, name='replacement_id_list'),
+    path('replacements/create/', views.replacement_id_create, name='replacement_id_create'),
+    path('replacements/<uuid:application_id>/', views.replacement_id_detail, name='replacement_id_detail'),
+    path('replacements/<uuid:application_id>/update/', views.replacement_id_update, name='replacement_id_update'),
+    path('replacements/<uuid:application_id>/delete/', views.replacement_id_delete, name='replacement_id_delete'),
+    
+    # AJAX URLs for cascading dropdowns
+    path('ajax/sub-counties/', views.ajax_sub_counties, name='ajax_sub_counties'),
+    path('ajax/divisions/', views.ajax_divisions, name='ajax_divisions'),
+    path('ajax/locations/', views.ajax_locations, name='ajax_locations'),
+    path('ajax/sub-locations/', views.ajax_sub_locations, name='ajax_sub_locations'),
+    path('ajax/villages/', views.ajax_villages, name='ajax_villages'),
 ]
