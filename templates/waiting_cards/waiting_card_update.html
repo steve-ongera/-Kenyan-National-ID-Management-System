@@ -1,0 +1,333 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Update Waiting Card - {{ waiting_card.serial_number }} - National ID Management System{% endblock %}
+
+{% block content %}
+<div class="message-container" id="system-messages">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+        <i class="bi {% if message.tags == 'success' %}bi-check-circle{% else %}bi-exclamation-triangle{% endif %} me-2"></i>
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="pagetitle">
+    <h1><i class="bi bi-pencil-square me-2"></i>Update Waiting Card</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="#"><i class="bi bi-house-door"></i> Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'waiting_cards_list' %}">Waiting Cards</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'waiting_card_detail' waiting_card.serial_number %}">{{ waiting_card.serial_number }}</a></li>
+            <li class="breadcrumb-item active">Update</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section">
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Update Form Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-credit-card-2-back me-2"></i>
+                        Update Waiting Card Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="updateForm">
+                        {% csrf_token %}
+                        
+                        <!-- Non-field errors -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    <p class="mb-0">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <!-- Expected Collection Date -->
+                                <div class="mb-3">
+                                    <label for="{{ form.expected_collection_date.id_for_label }}" class="form-label">
+                                        <i class="bi bi-calendar3 me-1"></i>{{ form.expected_collection_date.label }}
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    {% render_field form.expected_collection_date class="form-control" %}
+                                    {% if form.expected_collection_date.help_text %}
+                                        <small class="form-text text-muted">{{ form.expected_collection_date.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.expected_collection_date.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.expected_collection_date.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Collection Location -->
+                                <div class="mb-3">
+                                    <label for="{{ form.collection_location.id_for_label }}" class="form-label">
+                                        <i class="bi bi-geo-alt me-1"></i>{{ form.collection_location.label }}
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    {% render_field form.collection_location class="form-select" %}
+                                    {% if form.collection_location.help_text %}
+                                        <small class="form-text text-muted">{{ form.collection_location.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.collection_location.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.collection_location.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Status Checkboxes -->
+                                <div class="mb-3">
+                                    <label class="form-label">Card Status</label>
+                                    <div class="form-check">
+                                        {% render_field form.is_active class="form-check-input" %}
+                                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                            <i class="bi bi-check-circle me-1"></i>{{ form.is_active.label }}
+                                        </label>
+                                        {% if form.is_active.help_text %}
+                                            <small class="form-text text-muted d-block">{{ form.is_active.help_text }}</small>
+                                        {% endif %}
+                                        {% if form.is_active.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.is_active.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="form-check">
+                                        {% render_field form.is_collected class="form-check-input" %}
+                                        <label class="form-check-label" for="{{ form.is_collected.id_for_label }}">
+                                            <i class="bi bi-box-arrow-down me-1"></i>{{ form.is_collected.label }}
+                                        </label>
+                                        {% if form.is_collected.help_text %}
+                                            <small class="form-text text-muted d-block">{{ form.is_collected.help_text }}</small>
+                                        {% endif %}
+                                        {% if form.is_collected.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.is_collected.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <!-- Collection Instructions -->
+                                <div class="mb-3">
+                                    <label for="{{ form.collection_instructions.id_for_label }}" class="form-label">
+                                        <i class="bi bi-card-text me-1"></i>{{ form.collection_instructions.label }}
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    {% render_field form.collection_instructions class="form-control" %}
+                                    {% if form.collection_instructions.help_text %}
+                                        <small class="form-text text-muted">{{ form.collection_instructions.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.collection_instructions.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.collection_instructions.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Preview Section -->
+                                <div class="card border-info">
+                                    <div class="card-header bg-info text-white">
+                                        <h6 class="mb-0"><i class="bi bi-eye me-1"></i>Quick Preview</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="small">
+                                            <strong>Serial Number:</strong> {{ waiting_card.serial_number }}<br>
+                                            <strong>Applicant:</strong> {{ waiting_card.application.full_name }}<br>
+                                            <strong>Application:</strong> {{ waiting_card.application.application_number }}<br>
+                                            <strong>Current Status:</strong> 
+                                            <span class="badge {% if waiting_card.is_active %}bg-success{% else %}bg-danger{% endif %} badge-sm">
+                                                {% if waiting_card.is_active %}Active{% else %}Inactive{% endif %}
+                                            </span><br>
+                                            <strong>Collection Status:</strong>
+                                            <span class="badge {% if waiting_card.is_collected %}bg-primary{% else %}bg-warning{% endif %} badge-sm">
+                                                {% if waiting_card.is_collected %}Collected{% else %}Pending{% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <a href="{% url 'waiting_card_detail' waiting_card.serial_number %}" class="btn btn-outline-secondary">
+                                            <i class="bi bi-arrow-left me-2"></i>Cancel
+                                        </a>
+                                    </div>
+                                    <div>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="bi bi-check-lg me-2"></i>Update Waiting Card
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Card Information -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Current Card Information</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th width="45%">Serial Number:</th>
+                            <td><strong>{{ waiting_card.serial_number }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Issued Date:</th>
+                            <td>{{ waiting_card.issued_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Application:</th>
+                            <td>{{ waiting_card.application.application_number }}</td>
+                        </tr>
+                        <tr>
+                            <th>Applicant:</th>
+                            <td>{{ waiting_card.application.full_name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Phone:</th>
+                            <td>{{ waiting_card.application.phone_number }}</td>
+                        </tr>
+                        <tr>
+                            <th>Current Collection Date:</th>
+                            <td>{{ waiting_card.expected_collection_date|date:"M d, Y" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Current Location:</th>
+                            <td>{{ waiting_card.collection_location.name }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Application Status -->
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Application Status</h6>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <span class="badge bg-{% if waiting_card.application.status == 'biometrics_taken' %}success{% elif waiting_card.application.status == 'processing' %}warning{% else %}secondary{% endif %} badge-lg">
+                            {{ waiting_card.application.get_status_display }}
+                        </span>
+                    </div>
+                    
+                    <div class="progress-stacked" style="height: 25px;">
+                        {% with status=waiting_card.application.status %}
+                            <div class="progress" role="progressbar" style="width: {% if status == 'started' %}10{% elif status == 'documents_uploaded' %}20{% elif status == 'chief_review' %}30{% elif status == 'chief_approved' %}40{% elif status == 'do_review' %}50{% elif status == 'do_approved' %}60{% elif status == 'biometrics_scheduled' %}70{% elif status == 'biometrics_taken' %}80{% elif status == 'processing' %}90{% elif status == 'ready_for_collection' %}95{% elif status == 'collected' %}100{% else %}15{% endif %}%">
+                                <div class="progress-bar bg-primary">{{ status|title }}</div>
+                            </div>
+                        {% endwith %}
+                    </div>
+                    
+                    <div class="mt-3 small">
+                        <div class="d-flex justify-content-between">
+                            <span>Started</span>
+                            <span>Collected</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'waiting_card_detail' waiting_card.serial_number %}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye me-2"></i>View Full Card
+                        </a>
+                        <a href="{% url 'waiting_cards_list' %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-list me-2"></i>All Waiting Cards
+                        </a>
+                        {% if waiting_card.application %}
+                        <a href="#" class="btn btn-outline-info btn-sm">
+                            <i class="bi bi-file-earmark me-2"></i>View Application
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form validation
+    const form = document.getElementById('updateForm');
+    const collectionDate = document.querySelector('input[name="expected_collection_date"]');
+    const isCollectedCheckbox = document.querySelector('input[name="is_collected"]');
+    const isActiveCheckbox = document.querySelector('input[name="is_active"]');
+
+    // Warn if setting collection date in the past
+    if (collectionDate) {
+        collectionDate.addEventListener('change', function() {
+            const selectedDate = new Date(this.value);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (selectedDate < today) {
+                if (!confirm('You are setting a collection date in the past. Are you sure?')) {
+                    this.value = '';
+                }
+            }
+        });
+    }
+
+    // Auto-check active when collected is checked
+    if (isCollectedCheckbox && isActiveCheckbox) {
+        isCollectedCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                isActiveCheckbox.checked = true;
+                alert('Card has been marked as active since it was collected.');
+            }
+        });
+    }
+
+    // Confirm form submission
+    form.addEventListener('submit', function(e) {
+        if (!confirm('Are you sure you want to update this waiting card?')) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

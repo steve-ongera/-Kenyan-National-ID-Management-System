@@ -84,4 +84,10 @@ urlpatterns = [
     path('ajax/search/', views.birth_certificate_search, name='birth_certificate_search'),
     path('<str:certificate_number>/verify-status/', views.birth_certificate_verify_status, name='birth_certificate_verify_status'),
     path('verification-log/', views.birth_certificate_verification_log, name='birth_certificate_verification_log'),
+
+    # Waiting Cards Management
+    path('waiting-cards/', views.waiting_cards_list, name='waiting_cards_list'),
+    path('waiting-cards/<str:serial_number>/', views.waiting_card_detail, name='waiting_card_detail'),
+    path('waiting-cards/<str:serial_number>/update/', views.waiting_card_update, name='waiting_card_update'),
+    path('waiting-cards/<str:serial_number>/delete/', views.waiting_card_delete, name='waiting_card_delete'),
 ]

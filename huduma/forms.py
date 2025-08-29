@@ -286,3 +286,100 @@ class BulkActionForm(forms.Form):
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         label="I confirm that I want to perform this action on the selected National IDs"
     )
+
+
+
+from django import forms
+from .models import WaitingCard, DOOffice
+
+
+class WaitingCardForm(forms.ModelForm):
+    """Form for updating waiting card details"""
+    
+    class Meta:
+        model = WaitingCard
+        fields = [
+            'expected_collection_date',
+            'collection_location',
+            'collection_instructions',
+            'is_active',
+            'is_collected'
+        ]
+        widgets = {
+            'expected_collection_date': forms.DateInput(
+                attrs={
+                    'type': 'date',
+                    'class': 'form-control'
+                }
+            ),
+            'collection_location': forms.Select(
+                attrs={'class': 'form-select'}
+            ),
+            'collection_instructions': forms.Textarea(
+                attrs={
+                    'class': 'form-control',
+                    'rows': 4,
+                    'placeholder': 'Enter collection instructions for the applicant...'
+                }
+            ),
+            'is_active': forms.CheckboxInput(
+                attrs={'class': 'form-check-input'}
+            ),
+            'is_collected': forms.CheckboxInput(
+                attrs={'class': 'form-check-input'}
+            ),
+        }
+        labels = {
+            'expected_collection_date': 'Expected Collection Date',
+            'collection_location': 'Collection Location (DO Office)',
+            'collection_instructions': 'Collection Instructions',
+            'is_active': 'Card is Active',
+            'is_collected': 'Mark as Collected',
+        }
+        help_texts = {
+            'expected_collection_date': 'When should the applicant come to collect their ID?',
+            'collection_location': 'Which DO Office will handle the ID collection?',
+            'collection_instructions': 'Specific instructions for the applicant regarding collection process.',
+            'is_active': 'Uncheck to deactivate this waiting card',
+            'is_collected': 'Check if the ID has been collected using this waiting card',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filter collection locations to only active DO offices
+        self.fields['collection_location'].queryset = DOOffice.objects.filter(
+            is_active=True
+        ).order_by('name')
+        
+        # Make fields required
+        self.fields['expected_collection_date'].required = True
+        self.fields['collection_location'].required = True
+        self.fields['collection_instructions'].required = True
+
+    def clean_expected_collection_date(self):
+        """Validate collection date"""
+        expected_date = self.cleaned_data.get('expected_collection_date')
+        
+        if expected_date:
+            from django.utils import timezone
+            from datetime import date
+            
+            # Don't allow dates too far in the past
+            if expected_date < date.today():
+                raise forms.ValidationError("Collection date cannot be in the past.")
+        
+        return expected_date
+
+    def clean(self):
+        """Additional form validation"""
+        cleaned_data = super().clean()
+        is_collected = cleaned_data.get('is_collected')
+        is_active = cleaned_data.get('is_active')
+        
+        # If collected, it should still be active
+        if is_collected and not is_active:
+            raise forms.ValidationError(
+                "A collected waiting card should remain active for record keeping."
+            )
+        
+        return cleaned_data

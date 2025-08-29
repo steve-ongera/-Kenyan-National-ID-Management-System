@@ -1,0 +1,358 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Waiting Cards Database - National ID Management System{% endblock %}
+
+{% block content %}
+<div class="message-container" id="system-messages">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+        <i class="bi {% if message.tags == 'success' %}bi-check-circle{% else %}bi-exclamation-triangle{% endif %} me-2"></i>
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="pagetitle">
+    <h1><i class="bi bi-credit-card-2-back me-2"></i>Waiting Cards Database</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="#"><i class="bi bi-house-door"></i> Home</a></li>
+            <li class="breadcrumb-item active">Waiting Cards</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section">
+    <div class="row">
+        <div class="col-lg-12">
+            <!-- Filters Card -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="bi bi-funnel me-2"></i>Search & Filters</h6>
+                </div>
+                <div class="card-body">
+                    <form method="GET" id="filterForm">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label for="search" class="form-label">Search</label>
+                                <input type="text" name="search" id="search" class="form-control" 
+                                       placeholder="Serial number, applicant name, application number..." 
+                                       value="{{ search_query }}">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="collection_location" class="form-label">Collection Location</label>
+                                <select name="collection_location" id="collection_location" class="form-select">
+                                    <option value="">All Locations</option>
+                                    {% for location in collection_locations %}
+                                    <option value="{{ location.id }}" {% if location.id|stringformat:"s" == collection_location_filter %}selected{% endif %}>
+                                        {{ location.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="county" class="form-label">County of Birth</label>
+                                <select name="county" id="county" class="form-select">
+                                    <option value="">All Counties</option>
+                                    {% for county in counties %}
+                                    <option value="{{ county.id }}" {% if county.id|stringformat:"s" == county_filter %}selected{% endif %}>
+                                        {{ county.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="sub_county" class="form-label">Sub County</label>
+                                <select name="sub_county" id="sub_county" class="form-select">
+                                    <option value="">All Sub Counties</option>
+                                    {% for sub_county in sub_counties %}
+                                    <option value="{{ sub_county.id }}" {% if sub_county.id|stringformat:"s" == sub_county_filter %}selected{% endif %}>
+                                        {{ sub_county.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="is_active" class="form-label">Status</label>
+                                <select name="is_active" id="is_active" class="form-select">
+                                    <option value="">All Status</option>
+                                    {% for code, display in status_choices %}
+                                    <option value="{{ code }}" {% if code == is_active_filter %}selected{% endif %}>
+                                        {{ display }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-1">
+                                <label for="is_collected" class="form-label">Collected</label>
+                                <select name="is_collected" id="is_collected" class="form-select">
+                                    <option value="">All</option>
+                                    {% for code, display in collection_choices %}
+                                    <option value="{{ code }}" {% if code == is_collected_filter %}selected{% endif %}>
+                                        {{ display }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="date_from" class="form-label">Issued From</label>
+                                <input type="date" name="date_from" id="date_from" class="form-control" value="{{ date_from }}">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="date_to" class="form-label">Issued To</label>
+                                <input type="date" name="date_to" id="date_to" class="form-control" value="{{ date_to }}">
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary me-2">
+                                    <i class="bi bi-search me-1"></i>Filter
+                                </button>
+                                <a href="{% url 'waiting_cards_list' %}" class="btn btn-outline-secondary me-2">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>Clear
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Waiting Cards Table Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0"><i class="bi bi-list-ul me-2"></i>Waiting Cards</h5>
+                        <span class="badge bg-light text-dark">{{ waiting_cards.paginator.count }} Total</span>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Serial Number</th>
+                                    <th>Applicant Details</th>
+                                    <th>Application Info</th>
+                                    <th>Collection Details</th>
+                                    <th>Status</th>
+                                    <th>Issued Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for card in waiting_cards %}
+                                <tr>
+                                    <td>
+                                        <strong class="text-primary">{{ card.serial_number }}</strong>
+                                        <div class="text-muted small">
+                                            {% if card.qr_code %}
+                                                <i class="bi bi-qr-code text-success" title="QR Code Available"></i>
+                                            {% else %}
+                                                <i class="bi bi-qr-code text-muted" title="No QR Code"></i>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold">{{ card.application.full_name }}</div>
+                                        <div class="text-muted small">
+                                            <i class="bi bi-telephone me-1"></i>{{ card.application.phone_number }}
+                                        </div>
+                                        <div class="text-muted small">
+                                            <i class="bi bi-person-badge me-1"></i>{{ card.application.applicant.username }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold text-primary">{{ card.application.application_number }}</div>
+                                        <div class="text-muted small">{{ card.application.get_application_type_display }}</div>
+                                        <div class="text-muted small">
+                                            <span class="badge bg-{% if card.application.status == 'biometrics_taken' %}success{% elif card.application.status == 'processing' %}warning{% else %}secondary{% endif %} badge-sm">
+                                                {{ card.application.get_status_display }}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold">{{ card.collection_location.name }}</div>
+                                        <div class="text-muted small">
+                                            <i class="bi bi-calendar3 me-1"></i>{{ card.expected_collection_date|date:"M d, Y" }}
+                                        </div>
+                                        <div class="text-muted small">
+                                            {{ card.collection_location.county.name }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="mb-1">
+                                            <span class="badge {% if card.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                                                {% if card.is_active %}Active{% else %}Inactive{% endif %}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span class="badge {% if card.is_collected %}bg-primary{% else %}bg-warning{% endif %}">
+                                                {% if card.is_collected %}Collected{% else %}Pending{% endif %}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>{{ card.issued_at|date:"M d, Y" }}</div>
+                                        <div class="text-muted small">{{ card.issued_at|time:"H:i" }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'waiting_card_detail' card.serial_number %}" 
+                                               class="btn btn-sm btn-outline-primary" 
+                                               title="View Waiting Card">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{% url 'waiting_card_update' card.serial_number %}" 
+                                               class="btn btn-sm btn-outline-secondary" 
+                                               title="Edit Card">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-outline-danger" 
+                                                    title="Delete Card"
+                                                    onclick="confirmDelete('{{ card.serial_number }}', '{{ card.application.full_name }}')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <i class="bi bi-credit-card-2-back display-1 text-muted"></i>
+                                        <p class="text-muted mt-3">No waiting cards found</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if waiting_cards.paginator.num_pages > 1 %}
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div class="text-muted">
+                            Showing {{ waiting_cards.start_index }} to {{ waiting_cards.end_index }} of {{ waiting_cards.paginator.count }} entries
+                        </div>
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination">
+                                {% if waiting_cards.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="First">
+                                        <span aria-hidden="true">&laquo;&laquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ waiting_cards.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Previous">
+                                        <span aria-hidden="true">&laquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                                
+                                {% for num in waiting_cards.paginator.page_range %}
+                                    {% if waiting_cards.number == num %}
+                                    <li class="page-item active">
+                                        <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                                    </li>
+                                    {% elif num > waiting_cards.number|add:'-3' and num < waiting_cards.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                                    </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if waiting_cards.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ waiting_cards.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Next">
+                                        <span aria-hidden="true">&raquo;</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ waiting_cards.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Last">
+                                        <span aria-hidden="true">&raquo;&raquo;</span>
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the waiting card for <strong id="cardHolder"></strong>?</p>
+                <p class="text-danger">This action cannot be undone and may affect the applicant's ability to collect their ID.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete Waiting Card</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Auto-submit filters on change
+    document.querySelectorAll('#filterForm select, #filterForm input[type="date"]').forEach(element => {
+        element.addEventListener('change', function() {
+            document.getElementById('filterForm').submit();
+        });
+    });
+
+    // Search with delay
+    let searchTimeout;
+    document.getElementById('search').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            document.getElementById('filterForm').submit();
+        }, 500);
+    });
+
+    // Cascade county to sub-county
+    document.getElementById('county').addEventListener('change', function() {
+        const countyId = this.value;
+        const subCountySelect = document.getElementById('sub_county');
+        
+        // Clear sub-county options
+        subCountySelect.innerHTML = '<option value="">All Sub Counties</option>';
+        
+        if (countyId) {
+            // You would need to implement this endpoint in your views
+            fetch(`/ajax/sub-counties/?county_id=${countyId}`)
+                .then(response => response.json())
+                .then(data => {
+                    data.sub_counties.forEach(subCounty => {
+                        const option = document.createElement('option');
+                        option.value = subCounty.id;
+                        option.textContent = subCounty.name;
+                        subCountySelect.appendChild(option);
+                    });
+                });
+        }
+    });
+});
+
+function confirmDelete(serialNumber, cardHolder) {
+    document.getElementById('cardHolder').textContent = cardHolder;
+    document.getElementById('deleteForm').action = `/waiting-cards/${serialNumber}/delete/`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}

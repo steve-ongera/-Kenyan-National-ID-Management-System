@@ -1895,3 +1895,191 @@ def birth_certificate_verification_log(request):
     }
     
     return render(request, 'certificates/verification_log.html', context)
+
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.core.paginator import Paginator
+from django.db.models import Q
+from django.utils import timezone
+from django.http import JsonResponse
+from .models import WaitingCard, IDApplication, DOOffice, County, SubCounty
+from .forms import WaitingCardForm  # You'll need to create this form
+
+
+def is_admin_or_staff(user):
+    """Check if user is admin or authorized staff"""
+    return user.is_authenticated and (
+        user.is_superuser or 
+        user.user_type in ['admin', 'do_staff', 'do_officer', 'huduma_staff']
+    )
+
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def waiting_cards_list(request):
+    """List all waiting cards with filters and search"""
+    waiting_cards = WaitingCard.objects.select_related(
+        'application', 
+        'application__applicant', 
+        'collection_location',
+        'application__county_of_birth',
+        'application__sub_county_of_birth'
+    ).order_by('-issued_at')
+    
+    # Get filter parameters
+    search_query = request.GET.get('search', '')
+    collection_location_filter = request.GET.get('collection_location', '')
+    county_filter = request.GET.get('county', '')
+    sub_county_filter = request.GET.get('sub_county', '')
+    is_active_filter = request.GET.get('is_active', '')
+    is_collected_filter = request.GET.get('is_collected', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    # Apply search filter
+    if search_query:
+        waiting_cards = waiting_cards.filter(
+            Q(serial_number__icontains=search_query) |
+            Q(application__full_name__icontains=search_query) |
+            Q(application__application_number__icontains=search_query) |
+            Q(application__applicant__username__icontains=search_query) |
+            Q(application__applicant__phone_number__icontains=search_query)
+        )
+    
+    # Apply filters
+    if collection_location_filter:
+        waiting_cards = waiting_cards.filter(collection_location_id=collection_location_filter)
+    
+    if county_filter:
+        waiting_cards = waiting_cards.filter(application__county_of_birth_id=county_filter)
+    
+    if sub_county_filter:
+        waiting_cards = waiting_cards.filter(application__sub_county_of_birth_id=sub_county_filter)
+    
+    if is_active_filter:
+        is_active = is_active_filter.lower() == 'true'
+        waiting_cards = waiting_cards.filter(is_active=is_active)
+    
+    if is_collected_filter:
+        is_collected = is_collected_filter.lower() == 'true'
+        waiting_cards = waiting_cards.filter(is_collected=is_collected)
+    
+    # Apply date filters
+    if date_from:
+        waiting_cards = waiting_cards.filter(issued_at__date__gte=date_from)
+    
+    if date_to:
+        waiting_cards = waiting_cards.filter(issued_at__date__lte=date_to)
+    
+    # Pagination
+    paginator = Paginator(waiting_cards, 25)  # 25 cards per page
+    page_number = request.GET.get('page')
+    waiting_cards_page = paginator.get_page(page_number)
+    
+    # Get choices for filters
+    collection_locations = DOOffice.objects.filter(is_active=True).order_by('name')
+    counties = County.objects.order_by('name')
+    sub_counties = SubCounty.objects.order_by('name')
+    
+    if county_filter:
+        sub_counties = sub_counties.filter(county_id=county_filter)
+    
+    context = {
+        'waiting_cards': waiting_cards_page,
+        'search_query': search_query,
+        'collection_location_filter': collection_location_filter,
+        'county_filter': county_filter,
+        'sub_county_filter': sub_county_filter,
+        'is_active_filter': is_active_filter,
+        'is_collected_filter': is_collected_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'collection_locations': collection_locations,
+        'counties': counties,
+        'sub_counties': sub_counties,
+        'status_choices': [
+            ('true', 'Active'),
+            ('false', 'Inactive')
+        ],
+        'collection_choices': [
+            ('true', 'Collected'),
+            ('false', 'Not Collected')
+        ]
+    }
+    
+    return render(request, 'waiting_cards/waiting_cards_list.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def waiting_card_detail(request, serial_number):
+    """Display detailed view of a waiting card (like real Kenyan waiting card)"""
+    waiting_card = get_object_or_404(
+        WaitingCard.objects.select_related(
+            'application',
+            'application__applicant',
+            'collection_location',
+            'application__county_of_birth',
+            'application__sub_county_of_birth',
+            'application__division_of_birth',
+            'application__location_of_birth',
+            'application__sub_location_of_birth',
+            'application__village_of_birth',
+            'application__biometric_data'
+        ),
+        serial_number=serial_number
+    )
+    
+    context = {
+        'waiting_card': waiting_card,
+    }
+    
+    return render(request, 'waiting_cards/waiting_card_detail.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def waiting_card_update(request, serial_number):
+    """Update waiting card details"""
+    waiting_card = get_object_or_404(WaitingCard, serial_number=serial_number)
+    
+    if request.method == 'POST':
+        form = WaitingCardForm(request.POST, instance=waiting_card)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Waiting card {waiting_card.serial_number} updated successfully.')
+            return redirect('waiting_card_detail', serial_number=waiting_card.serial_number)
+    else:
+        form = WaitingCardForm(instance=waiting_card)
+    
+    context = {
+        'form': form,
+        'waiting_card': waiting_card,
+    }
+    
+    return render(request, 'waiting_cards/waiting_card_update.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def waiting_card_delete(request, serial_number):
+    """Delete waiting card"""
+    waiting_card = get_object_or_404(WaitingCard, serial_number=serial_number)
+    
+    if request.method == 'POST':
+        waiting_card_serial = waiting_card.serial_number
+        application_number = waiting_card.application.application_number
+        waiting_card.delete()
+        messages.success(
+            request, 
+            f'Waiting card {waiting_card_serial} for application {application_number} has been deleted.'
+        )
+        return redirect('waiting_cards_list')
+    
+    context = {
+        'waiting_card': waiting_card,
+    }
+    
+    return render(request, 'waiting_cards/waiting_card_delete.html', context)
