@@ -78,4 +78,10 @@ urlpatterns = [
     path('ajax/locations/', views.ajax_locations, name='ajax_locations'),
     path('ajax/sub-locations/', views.ajax_sub_locations, name='ajax_sub_locations'),
     path('ajax/villages/', views.ajax_villages, name='ajax_villages'),
+
+    # Birth Certificate Verification URLs
+    path('verify/', views.birth_certificate_verify, name='birth_certificate_verify'),
+    path('ajax/search/', views.birth_certificate_search, name='birth_certificate_search'),
+    path('<str:certificate_number>/verify-status/', views.birth_certificate_verify_status, name='birth_certificate_verify_status'),
+    path('verification-log/', views.birth_certificate_verification_log, name='birth_certificate_verification_log'),
 ]
