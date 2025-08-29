@@ -478,7 +478,7 @@ function performSearch() {
     animateProgress();
     
     // Perform AJAX search
-    fetch('{% url "certificates:birth_certificate_search" %}', {
+    fetch('{% url "birth_certificate_search" %}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
