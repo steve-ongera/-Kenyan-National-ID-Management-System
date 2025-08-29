@@ -1,0 +1,665 @@
+<!-- Add this to the bottom of your verify_certificate.html template, before the closing script tag -->
+
+<!-- Status Update Modal -->
+<div class="modal fade" id="statusUpdateModal" tabindex="-1" aria-labelledby="statusUpdateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="statusUpdateModalLabel">
+                    <i class="bi bi-pencil-square me-2"></i>Update Certificate Status
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0">Current Status</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Certificate Status:</label>
+                                    <div>
+                                        <span id="current-active-status" class="status-badge">-</span>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Verification Status:</label>
+                                    <div>
+                                        <span id="current-verified-status" class="status-badge">-</span>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Certificate Number:</label>
+                                    <div id="modal-cert-number" class="fw-bold">-</div>
+                                </div>
+                                <div>
+                                    <label class="form-label">Full Name:</label>
+                                    <div id="modal-full-name" class="fw-bold">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                <h6 class="mb-0">Update Actions</h6>
+                            </div>
+                            <div class="card-body">
+                                <form id="statusUpdateForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">Select Action:</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="action" id="action-verify" value="verify">
+                                            <label class="form-check-label text-success" for="action-verify">
+                                                <i class="bi bi-check-circle me-1"></i>Mark as Verified
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="action" id="action-unverify" value="unverify">
+                                            <label class="form-check-label text-warning" for="action-unverify">
+                                                <i class="bi bi-exclamation-triangle me-1"></i>Mark as Unverified
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="action" id="action-activate" value="activate">
+                                            <label class="form-check-label text-primary" for="action-activate">
+                                                <i class="bi bi-play-circle me-1"></i>Activate Certificate
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="action" id="action-deactivate" value="deactivate">
+                                            <label class="form-check-label text-danger" for="action-deactivate">
+                                                <i class="bi bi-stop-circle me-1"></i>Deactivate Certificate
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="update-reason" class="form-label">Reason for Update:</label>
+                                        <textarea class="form-control" id="update-reason" name="reason" rows="3" 
+                                                placeholder="Enter reason for status update (required)"></textarea>
+                                    </div>
+                                    
+                                    <div class="alert alert-info">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        <strong>Note:</strong> All status changes are logged and auditable. Ensure you have proper authorization for this action.
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-2"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary" onclick="submitStatusUpdate()">
+                    <i class="bi bi-check-circle me-2"></i>Update Status
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats Dashboard -->
+<div class="row mt-4" id="quickStatsRow" style="display: none;">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>System Statistics</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-2">
+                        <div class="stat-box">
+                            <h3 class="text-primary mb-0">2,847,392</h3>
+                            <small class="text-muted">Total Certificates</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="stat-box">
+                            <h3 class="text-success mb-0">2,823,156</h3>
+                            <small class="text-muted">Verified</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="stat-box">
+                            <h3 class="text-warning mb-0">24,236</h3>
+                            <small class="text-muted">Pending</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="stat-box">
+                            <h3 class="text-info mb-0">1,247</h3>
+                            <small class="text-muted">Today</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="stat-box">
+                            <h3 class="text-success mb-0">98.7%</h3>
+                            <small class="text-muted">Success Rate</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="stat-box">
+                            <h3 class="text-primary mb-0">0.8s</h3>
+                            <small class="text-muted">Avg Response</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Additional JavaScript Functions -->
+<script>
+// Global variable to store current certificate data
+let currentCertificate = null;
+
+// Update the displayCertificate function to store certificate data
+function displayCertificateOriginal(certificate) {
+    currentCertificate = certificate;
+    // ... existing displayCertificate code ...
+}
+
+// Enhanced status update function
+function updateStatus() {
+    if (!currentCertificate) {
+        showMessage('No certificate selected for status update', 'warning');
+        return;
+    }
+    
+    // Populate modal with current certificate data
+    document.getElementById('modal-cert-number').textContent = currentCertificate.certificate_number;
+    document.getElementById('modal-full-name').textContent = currentCertificate.full_name;
+    
+    const currentActiveStatus = document.getElementById('current-active-status');
+    const currentVerifiedStatus = document.getElementById('current-verified-status');
+    
+    if (currentCertificate.is_active) {
+        currentActiveStatus.textContent = 'ACTIVE';
+        currentActiveStatus.className = 'status-badge status-active';
+    } else {
+        currentActiveStatus.textContent = 'INACTIVE';
+        currentActiveStatus.className = 'status-badge status-inactive';
+    }
+    
+    if (currentCertificate.is_verified) {
+        currentVerifiedStatus.textContent = 'VERIFIED';
+        currentVerifiedStatus.className = 'status-badge status-verified';
+    } else {
+        currentVerifiedStatus.textContent = 'UNVERIFIED';
+        currentVerifiedStatus.className = 'status-badge status-unverified';
+    }
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('statusUpdateModal'));
+    modal.show();
+}
+
+// Submit status update
+function submitStatusUpdate() {
+    const form = document.getElementById('statusUpdateForm');
+    const formData = new FormData(form);
+    const action = formData.get('action');
+    const reason = formData.get('reason');
+    
+    if (!action) {
+        showMessage('Please select an action', 'warning');
+        return;
+    }
+    
+    if (!reason || reason.trim() === '') {
+        showMessage('Please provide a reason for the status update', 'warning');
+        return;
+    }
+    
+    // Show loading state
+    const submitBtn = document.querySelector('#statusUpdateModal .btn-primary');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
+    submitBtn.disabled = true;
+    
+    // Make AJAX request to update status
+    fetch(`/certificates/${currentCertificate.certificate_number}/verify-status/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: new URLSearchParams({
+            action: action,
+            reason: reason
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+        
+        if (data.success) {
+            // Update current certificate data
+            currentCertificate.is_verified = data.new_status.is_verified;
+            currentCertificate.is_active = data.new_status.is_active;
+            
+            // Update display
+            displayCertificate(currentCertificate);
+            
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('statusUpdateModal')).hide();
+            
+            showMessage(data.message, 'success');
+        } else {
+            showMessage(data.error || 'Failed to update status', 'danger');
+        }
+    })
+    .catch(error => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+        showMessage('Network error occurred', 'danger');
+        console.error('Status update error:', error);
+    });
+}
+
+// Enhanced download certificate function
+function downloadCertificate() {
+    if (!currentCertificate) {
+        showMessage('No certificate available for download', 'warning');
+        return;
+    }
+    
+    // Create a more detailed PDF-like content
+    const certificateContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Birth Certificate - ${currentCertificate.full_name}</title>
+            <style>
+                @page { size: A4; margin: 20mm; }
+                body { 
+                    font-family: 'Times New Roman', serif; 
+                    line-height: 1.4;
+                    color: #000;
+                    background: white;
+                }
+                .header { 
+                    text-align: center; 
+                    border-bottom: 3px solid #000; 
+                    padding-bottom: 20px; 
+                    margin-bottom: 30px;
+                }
+                .coat-of-arms {
+                    width: 100px;
+                    height: 100px;
+                    margin: 0 auto 15px;
+                    background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0iIzAwNzNlNiIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0id2hpdGUiIGZvbnQtc2l6ZT0iMTAiPktFTllBPC90ZXh0Pjwvc3ZnPg==') center/contain no-repeat;
+                }
+                .title { font-size: 24px; font-weight: bold; margin: 10px 0; }
+                .subtitle { font-size: 14px; margin: 5px 0; }
+                .certificate-title { 
+                    font-size: 28px; 
+                    font-weight: bold; 
+                    color: #d63384;
+                    margin-top: 20px;
+                    text-decoration: underline;
+                }
+                .section { margin: 20px 0; }
+                .section-title { 
+                    font-size: 16px; 
+                    font-weight: bold; 
+                    border-bottom: 2px solid #ccc;
+                    padding-bottom: 5px;
+                    margin-bottom: 15px;
+                    color: #0d6efd;
+                }
+                .info-row { 
+                    display: flex; 
+                    justify-content: space-between; 
+                    margin: 8px 0;
+                    padding: 5px 0;
+                }
+                .label { font-weight: bold; min-width: 200px; }
+                .value { text-align: right; }
+                .footer {
+                    margin-top: 40px;
+                    text-align: center;
+                    font-size: 12px;
+                    color: #666;
+                    border-top: 1px solid #ccc;
+                    padding-top: 20px;
+                }
+                .watermark {
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%) rotate(-45deg);
+                    font-size: 120px;
+                    color: rgba(0,0,0,0.05);
+                    z-index: -1;
+                }
+                @media print {
+                    .no-print { display: none !important; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="watermark">GOVERNMENT OF KENYA</div>
+            <div class="header">
+                <div class="coat-of-arms"></div>
+                <div class="title">REPUBLIC OF KENYA</div>
+                <div class="subtitle">Ministry of Interior and Coordination of National Government</div>
+                <div class="subtitle">Department of Civil Registration Services</div>
+                <div class="certificate-title">BIRTH CERTIFICATE</div>
+            </div>
+            
+            <div class="section">
+                <div class="info-row">
+                    <span class="label">Certificate Number:</span>
+                    <span class="value">${currentCertificate.certificate_number}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Serial Number:</span>
+                    <span class="value">${currentCertificate.serial_number}</span>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">PERSONAL INFORMATION</div>
+                <div class="info-row">
+                    <span class="label">Full Name:</span>
+                    <span class="value">${currentCertificate.full_name}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Date of Birth:</span>
+                    <span class="value">${currentCertificate.date_of_birth}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Gender:</span>
+                    <span class="value">${currentCertificate.gender}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Place of Birth:</span>
+                    <span class="value">${currentCertificate.place_of_birth}</span>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">BIRTH LOCATION</div>
+                <div class="info-row">
+                    <span class="label">County:</span>
+                    <span class="value">${currentCertificate.county_of_birth}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Sub County:</span>
+                    <span class="value">${currentCertificate.sub_county_of_birth}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Division:</span>
+                    <span class="value">${currentCertificate.division_of_birth}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Location:</span>
+                    <span class="value">${currentCertificate.location_of_birth}</span>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">FAMILY INFORMATION</div>
+                <div class="info-row">
+                    <span class="label">Father's Name:</span>
+                    <span class="value">${currentCertificate.father_name}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Father's Nationality:</span>
+                    <span class="value">${currentCertificate.father_nationality}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Mother's Name:</span>
+                    <span class="value">${currentCertificate.mother_name}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Mother's Nationality:</span>
+                    <span class="value">${currentCertificate.mother_nationality}</span>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <p><strong>GOVERNMENT OF KENYA</strong></p>
+                <p>This is a digitally verified birth certificate issued by the Department of Civil Registration Services</p>
+                <p>Generated on: ${new Date().toLocaleDateString('en-GB')} at ${new Date().toLocaleTimeString()}</p>
+            </div>
+        </body>
+        </html>
+    `;
+    
+    // Create and download the file
+    const blob = new Blob([certificateContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Birth_Certificate_${currentCertificate.certificate_number}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showMessage('Certificate downloaded successfully', 'success');
+}
+
+// Show quick stats after successful search
+function showQuickStats() {
+    document.getElementById('quickStatsRow').style.display = 'block';
+}
+
+// Update the original displayCertificate function
+function displayCertificate(certificate) {
+    currentCertificate = certificate;
+    
+    // Populate certificate data
+    document.getElementById('cert-number').textContent = certificate.certificate_number;
+    document.getElementById('serial-number').textContent = certificate.serial_number;
+    document.getElementById('full-name').textContent = certificate.full_name;
+    document.getElementById('date-of-birth').textContent = certificate.date_of_birth;
+    document.getElementById('age').textContent = certificate.age + ' years';
+    document.getElementById('gender').textContent = certificate.gender;
+    document.getElementById('place-of-birth').textContent = certificate.place_of_birth;
+    
+    // Birth location
+    document.getElementById('county-birth').textContent = certificate.county_of_birth;
+    document.getElementById('sub-county-birth').textContent = certificate.sub_county_of_birth;
+    document.getElementById('division-birth').textContent = certificate.division_of_birth;
+    document.getElementById('location-birth').textContent = certificate.location_of_birth;
+    document.getElementById('sub-location-birth').textContent = certificate.sub_location_of_birth;
+    document.getElementById('village-birth').textContent = certificate.village_of_birth;
+    
+    // Family information
+    document.getElementById('father-name').textContent = certificate.father_name;
+    document.getElementById('father-id').textContent = certificate.father_id;
+    document.getElementById('father-nationality').textContent = certificate.father_nationality;
+    document.getElementById('mother-name').textContent = certificate.mother_name;
+    document.getElementById('mother-id').textContent = certificate.mother_id;
+    document.getElementById('mother-nationality').textContent = certificate.mother_nationality;
+    
+    // Registration details
+    document.getElementById('registration-date').textContent = certificate.registration_date;
+    document.getElementById('issuing-office').textContent = certificate.issuing_office;
+    document.getElementById('registrar-name').textContent = certificate.registrar_name;
+    
+    // Status badges
+    const activeStatus = document.getElementById('active-status');
+    const verifiedStatus = document.getElementById('verified-status');
+    
+    if (certificate.is_active) {
+        activeStatus.textContent = 'ACTIVE';
+        activeStatus.className = 'status-badge status-active';
+    } else {
+        activeStatus.textContent = 'INACTIVE';
+        activeStatus.className = 'status-badge status-inactive';
+    }
+    
+    if (certificate.is_verified) {
+        verifiedStatus.textContent = 'VERIFIED';
+        verifiedStatus.className = 'status-badge status-verified';
+    } else {
+        verifiedStatus.textContent = 'UNVERIFIED';
+        verifiedStatus.className = 'status-badge status-unverified';
+    }
+    
+    // Show certificate viewer
+    document.getElementById('certificateViewer').classList.remove('d-none');
+    
+    // Show quick stats
+    showQuickStats();
+    
+    // Scroll to certificate
+    document.getElementById('certificateViewer').scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+    });
+}
+
+// Enhanced search with real-time validation
+document.addEventListener('DOMContentLoaded', function() {
+    const certificateInput = document.getElementById('certificateNumber');
+    const serialInput = document.getElementById('serialNumber');
+    const searchBtn = document.getElementById('searchBtn');
+    
+    // Real-time validation
+    function validateInputs() {
+        const certValue = certificateInput.value.trim();
+        const serialValue = serialInput.value.trim();
+        
+        if (certValue || serialValue) {
+            searchBtn.disabled = false;
+            searchBtn.classList.remove('btn-secondary');
+            searchBtn.classList.add('btn-primary');
+        } else {
+            searchBtn.disabled = true;
+            searchBtn.classList.remove('btn-primary');
+            searchBtn.classList.add('btn-secondary');
+        }
+        
+        // Format inputs as they type
+        if (certValue && !/^[A-Z0-9-]+$/.test(certValue)) {
+            certificateInput.classList.add('is-invalid');
+        } else {
+            certificateInput.classList.remove('is-invalid');
+        }
+        
+        if (serialValue && !/^[A-Z0-9]+$/.test(serialValue)) {
+            serialInput.classList.add('is-invalid');
+        } else {
+            serialInput.classList.remove('is-invalid');
+        }
+    }
+    
+    certificateInput.addEventListener('input', validateInputs);
+    serialInput.addEventListener('input', validateInputs);
+    
+    // Initial validation
+    validateInputs();
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // Ctrl+F or Cmd+F to focus search
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        document.getElementById('certificateNumber').focus();
+    }
+    
+    // Escape to clear search
+    if (e.key === 'Escape') {
+        clearSearch();
+    }
+    
+    // Enter to search when inputs are focused
+    if (e.key === 'Enter' && (e.target.id === 'certificateNumber' || e.target.id === 'serialNumber')) {
+        e.preventDefault();
+        if (!document.getElementById('searchBtn').disabled) {
+            performSearch();
+        }
+    }
+});
+
+// Enhanced error handling and user feedback
+function handleSearchError(error) {
+    console.error('Search error:', error);
+    
+    // Hide progress
+    document.getElementById('searchProgress').style.display = 'none';
+    
+    // Show user-friendly error message based on error type
+    let errorMessage = 'An unexpected error occurred during search';
+    
+    if (error.name === 'NetworkError' || error.message.includes('fetch')) {
+        errorMessage = 'Network connection error. Please check your internet connection and try again.';
+    } else if (error.message.includes('timeout')) {
+        errorMessage = 'Search request timed out. Please try again.';
+    } else if (error.message.includes('server')) {
+        errorMessage = 'Server error occurred. Please contact system administrator if the problem persists.';
+    }
+    
+    showMessage(errorMessage, 'danger');
+    
+    // Show retry option
+    setTimeout(() => {
+        const retryHtml = `
+            <div class="alert alert-info alert-dismissible fade show mt-2">
+                <i class="bi bi-arrow-clockwise me-2"></i>
+                <strong>Want to try again?</strong> 
+                <button class="btn btn-sm btn-outline-primary ms-2" onclick="performSearch()">
+                    Retry Search
+                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        document.getElementById('system-messages').insertAdjacentHTML('beforeend', retryHtml);
+    }, 1000);
+}
+
+// Add browser storage for search history (recent searches)
+function saveRecentSearch(certificateNumber, serialNumber) {
+    try {
+        const searches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
+        const newSearch = {
+            certificateNumber: certificateNumber,
+            serialNumber: serialNumber,
+            timestamp: new Date().toISOString()
+        };
+        
+        // Remove duplicates and add new search
+        const filteredSearches = searches.filter(s => 
+            s.certificateNumber !== certificateNumber || s.serialNumber !== serialNumber
+        );
+        
+        filteredSearches.unshift(newSearch);
+        
+        // Keep only last 10 searches
+        const recentSearches = filteredSearches.slice(0, 10);
+        
+        localStorage.setItem('recentSearches', JSON.stringify(recentSearches));
+    } catch (e) {
+        // Handle localStorage errors gracefully
+        console.warn('Could not save recent search:', e);
+    }
+}
+
+// Load and display recent searches
+function loadRecentSearches() {
+    try {
+        const searches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
+        if (searches.length > 0) {
+            // Add recent searches dropdown or display
+            console.log('Recent searches loaded:', searches.length);
+        }
+    } catch (e) {
+        console.warn('Could not load recent searches:', e);
+    }
+}
+
+// Call on page load
+document.addEventListener('DOMContentLoaded', loadRecentSearches);

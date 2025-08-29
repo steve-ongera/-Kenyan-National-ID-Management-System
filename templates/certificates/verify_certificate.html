@@ -1,0 +1,707 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Birth Certificate Verification - National ID Management System{% endblock %}
+
+{% block extra_css %}
+<style>
+.search-progress {
+    display: none;
+}
+.certificate-viewer {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #dee2e6;
+    border-radius: 15px;
+    padding: 20px;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+.certificate-header {
+    text-align: center;
+    border-bottom: 3px solid #0d6efd;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+.coat-of-arms {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 10px;
+    background: url('/static/images/kenya-coat-of-arms.png') center/contain no-repeat;
+}
+.certificate-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #0d6efd;
+    text-transform: uppercase;
+}
+.certificate-subtitle {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 15px;
+    margin: 5px 0;
+    background: white;
+    border-radius: 8px;
+    border-left: 4px solid #0d6efd;
+}
+.info-label {
+    font-weight: 600;
+    color: #495057;
+    min-width: 150px;
+}
+.info-value {
+    color: #212529;
+    text-align: right;
+    font-weight: 500;
+}
+.status-badge {
+    padding: 8px 16px;
+    border-radius: 25px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.status-active {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+.status-inactive {
+    background: #f8d7da;
+    color: #842029;
+}
+.status-verified {
+    background: #cff4fc;
+    color: #055160;
+}
+.status-unverified {
+    background: #fff3cd;
+    color: #664d03;
+}
+.certificate-watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    font-size: 4rem;
+    color: rgba(13, 110, 253, 0.05);
+    font-weight: bold;
+    z-index: 1;
+    pointer-events: none;
+}
+.search-animation {
+    text-align: center;
+    padding: 40px;
+}
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #0d6efd;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+.progress-text {
+    font-size: 1.2rem;
+    color: #0d6efd;
+    font-weight: 600;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="message-container" id="system-messages">
+    <!-- Messages will be added here dynamically -->
+</div>
+
+<div class="pagetitle">
+    <h1><i class="bi bi-shield-check me-2"></i>Birth Certificate Verification</h1>
+    <nav>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/"><i class="bi bi-house-door"></i> Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'birth_certificates_list' %}">Birth Certificates</a></li>
+            <li class="breadcrumb-item active">Verify Certificate</li>
+        </ol>
+    </nav>
+</div>
+
+<section class="section">
+    <div class="row">
+        <!-- Search Panel -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-search me-2"></i>Certificate Search</h5>
+                </div>
+                <div class="card-body">
+                    <form id="searchForm">
+                        <div class="mb-3">
+                            <label for="certificateNumber" class="form-label">Certificate Number</label>
+                            <input type="text" class="form-control" id="certificateNumber" name="certificate_number" 
+                                   placeholder="Enter certificate number" style="text-transform: uppercase;">
+                            <small class="form-text text-muted">Primary certificate identifier</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="serialNumber" class="form-label">Serial Number</label>
+                            <input type="text" class="form-control" id="serialNumber" name="serial_number" 
+                                   placeholder="Enter serial number" style="text-transform: uppercase;">
+                            <small class="form-text text-muted">Alternative identifier</small>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Search Requirements:</strong><br>
+                            Provide at least one of the above identifiers to search for a birth certificate.
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100" id="searchBtn">
+                            <i class="bi bi-search me-2"></i>Search Certificate
+                        </button>
+                        
+                        <button type="button" class="btn btn-outline-secondary w-100 mt-2" id="clearBtn">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Clear Search
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Search Statistics -->
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Verification Statistics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h4 class="text-primary mb-0">1,247</h4>
+                            <small class="text-muted">Verified Today</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-success mb-0">98.7%</h4>
+                            <small class="text-muted">Success Rate</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Results Panel -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Certificate Details</h5>
+                </div>
+                <div class="card-body" id="resultsPanel">
+                    <div class="text-center py-5" id="defaultView">
+                        <i class="bi bi-search display-1 text-muted"></i>
+                        <h4 class="text-muted mt-3">Search for a Birth Certificate</h4>
+                        <p class="text-muted">Enter certificate or serial number to view certificate details</p>
+                    </div>
+                    
+                    <!-- Search Progress -->
+                    <div class="search-progress" id="searchProgress">
+                        <div class="search-animation">
+                            <div class="spinner"></div>
+                            <div class="progress-text" id="progressText">Searching... 0%</div>
+                            <div class="progress mt-3">
+                                <div class="progress-bar progress-bar-animated" id="progressBar" role="progressbar" 
+                                     style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Certificate Display -->
+                    <div class="certificate-viewer d-none" id="certificateViewer">
+                        <div class="certificate-watermark">GOVERNMENT OF KENYA</div>
+                        
+                        <div class="certificate-header">
+                            <div class="coat-of-arms"></div>
+                            <div class="certificate-title">Republic of Kenya</div>
+                            <div class="certificate-subtitle">Ministry of Interior and Coordination of National Government</div>
+                            <div class="certificate-subtitle">Department of Civil Registration Services</div>
+                            <h3 class="mt-3 mb-0" style="color: #dc3545;">BIRTH CERTIFICATE</h3>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">Certificate No:</span>
+                                    <span class="info-value" id="cert-number">-</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">Serial No:</span>
+                                    <span class="info-value" id="serial-number">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h5 class="text-primary mb-3">PERSONAL INFORMATION</h5>
+                        <div class="info-row">
+                            <span class="info-label">Full Name:</span>
+                            <span class="info-value" id="full-name">-</span>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">Date of Birth:</span>
+                                    <span class="info-value" id="date-of-birth">-</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">Age:</span>
+                                    <span class="info-value" id="age">- years</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">Gender:</span>
+                                    <span class="info-value" id="gender">-</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">Place of Birth:</span>
+                                    <span class="info-value" id="place-of-birth">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h5 class="text-primary mb-3 mt-4">BIRTH LOCATION</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">County:</span>
+                                    <span class="info-value" id="county-birth">-</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">Sub County:</span>
+                                    <span class="info-value" id="sub-county-birth">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">Division:</span>
+                                    <span class="info-value" id="division-birth">-</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">Location:</span>
+                                    <span class="info-value" id="location-birth">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">Sub Location:</span>
+                                    <span class="info-value" id="sub-location-birth">-</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">Village:</span>
+                                    <span class="info-value" id="village-birth">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h5 class="text-primary mb-3 mt-4">FAMILY INFORMATION</h5>
+                        <div class="info-row">
+                            <span class="info-label">Father's Name:</span>
+                            <span class="info-value" id="father-name">-</span>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">Father's ID:</span>
+                                    <span class="info-value" id="father-id">-</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">Father's Nationality:</span>
+                                    <span class="info-value" id="father-nationality">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Mother's Name:</span>
+                            <span class="info-value" id="mother-name">-</span>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">Mother's ID:</span>
+                                    <span class="info-value" id="mother-id">-</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">Mother's Nationality:</span>
+                                    <span class="info-value" id="mother-nationality">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h5 class="text-primary mb-3 mt-4">REGISTRATION DETAILS</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">Registration Date:</span>
+                                    <span class="info-value" id="registration-date">-</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">Issuing Office:</span>
+                                    <span class="info-value" id="issuing-office">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Registrar Name:</span>
+                            <span class="info-value" id="registrar-name">-</span>
+                        </div>
+                        
+                        <h5 class="text-primary mb-3 mt-4">STATUS INFORMATION</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">Certificate Status:</span>
+                                    <span class="info-value">
+                                        <span class="status-badge" id="active-status">-</span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-row">
+                                    <span class="info-label">Verification Status:</span>
+                                    <span class="info-value">
+                                        <span class="status-badge" id="verified-status">-</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-4">
+                            <div class="col-md-12">
+                                <div class="alert alert-success" role="alert">
+                                    <i class="bi bi-shield-check me-2"></i>
+                                    <strong>Certificate Verified!</strong> This is an authentic Kenyan birth certificate issued by the Department of Civil Registration Services.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="row mt-3">
+                            <div class="col-md-12 text-center">
+                                <button class="btn btn-success me-2" onclick="printCertificate()">
+                                    <i class="bi bi-printer me-2"></i>Print Certificate
+                                </button>
+                                <button class="btn btn-primary me-2" onclick="downloadCertificate()">
+                                    <i class="bi bi-download me-2"></i>Download PDF
+                                </button>
+                                <button class="btn btn-warning" onclick="updateStatus()">
+                                    <i class="bi bi-pencil-square me-2"></i>Update Status
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Not Found Display -->
+                    <div class="text-center py-5 d-none" id="notFoundView">
+                        <i class="bi bi-exclamation-triangle display-1 text-warning"></i>
+                        <h4 class="text-warning mt-3">Certificate Not Found</h4>
+                        <p class="text-muted">No birth certificate found with the provided details. Please verify your search parameters.</p>
+                        <button class="btn btn-primary" onclick="clearSearch()">
+                            <i class="bi bi-arrow-left me-2"></i>Try Another Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchForm = document.getElementById('searchForm');
+    const searchBtn = document.getElementById('searchBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    
+    searchForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        performSearch();
+    });
+    
+    clearBtn.addEventListener('click', function() {
+        clearSearch();
+    });
+});
+
+function performSearch() {
+    const certificateNumber = document.getElementById('certificateNumber').value.trim();
+    const serialNumber = document.getElementById('serialNumber').value.trim();
+    
+    if (!certificateNumber && !serialNumber) {
+        showMessage('Please enter at least one search parameter', 'warning');
+        return;
+    }
+    
+    // Hide all views
+    hideAllViews();
+    
+    // Show progress
+    document.getElementById('searchProgress').style.display = 'block';
+    
+    // Animate progress
+    animateProgress();
+    
+    // Perform AJAX search
+    fetch('{% url "certificates:birth_certificate_search" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value || getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            certificate_number: certificateNumber,
+            serial_number: serialNumber
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        setTimeout(() => {
+            document.getElementById('searchProgress').style.display = 'none';
+            
+            if (data.success && data.found) {
+                displayCertificate(data.certificate);
+            } else if (data.success && !data.found) {
+                document.getElementById('notFoundView').classList.remove('d-none');
+            } else {
+                showMessage(data.error || 'An error occurred during search', 'danger');
+            }
+        }, 2000); // Wait for progress animation
+    })
+    .catch(error => {
+        document.getElementById('searchProgress').style.display = 'none';
+        showMessage('Network error occurred during search', 'danger');
+        console.error('Search error:', error);
+    });
+}
+
+function animateProgress() {
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    let progress = 0;
+    
+    const interval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress > 100) progress = 100;
+        
+        progressBar.style.width = progress + '%';
+        progressBar.setAttribute('aria-valuenow', progress);
+        progressText.textContent = `Searching... ${Math.round(progress)}%`;
+        
+        if (progress >= 100) {
+            clearInterval(interval);
+            progressText.textContent = 'Processing results...';
+        }
+    }, 200);
+}
+
+function displayCertificate(certificate) {
+    // Populate certificate data
+    document.getElementById('cert-number').textContent = certificate.certificate_number;
+    document.getElementById('serial-number').textContent = certificate.serial_number;
+    document.getElementById('full-name').textContent = certificate.full_name;
+    document.getElementById('date-of-birth').textContent = certificate.date_of_birth;
+    document.getElementById('age').textContent = certificate.age + ' years';
+    document.getElementById('gender').textContent = certificate.gender;
+    document.getElementById('place-of-birth').textContent = certificate.place_of_birth;
+    
+    // Birth location
+    document.getElementById('county-birth').textContent = certificate.county_of_birth;
+    document.getElementById('sub-county-birth').textContent = certificate.sub_county_of_birth;
+    document.getElementById('division-birth').textContent = certificate.division_of_birth;
+    document.getElementById('location-birth').textContent = certificate.location_of_birth;
+    document.getElementById('sub-location-birth').textContent = certificate.sub_location_of_birth;
+    document.getElementById('village-birth').textContent = certificate.village_of_birth;
+    
+    // Family information
+    document.getElementById('father-name').textContent = certificate.father_name;
+    document.getElementById('father-id').textContent = certificate.father_id;
+    document.getElementById('father-nationality').textContent = certificate.father_nationality;
+    document.getElementById('mother-name').textContent = certificate.mother_name;
+    document.getElementById('mother-id').textContent = certificate.mother_id;
+    document.getElementById('mother-nationality').textContent = certificate.mother_nationality;
+    
+    // Registration details
+    document.getElementById('registration-date').textContent = certificate.registration_date;
+    document.getElementById('issuing-office').textContent = certificate.issuing_office;
+    document.getElementById('registrar-name').textContent = certificate.registrar_name;
+    
+    // Status badges
+    const activeStatus = document.getElementById('active-status');
+    const verifiedStatus = document.getElementById('verified-status');
+    
+    if (certificate.is_active) {
+        activeStatus.textContent = 'ACTIVE';
+        activeStatus.className = 'status-badge status-active';
+    } else {
+        activeStatus.textContent = 'INACTIVE';
+        activeStatus.className = 'status-badge status-inactive';
+    }
+    
+    if (certificate.is_verified) {
+        verifiedStatus.textContent = 'VERIFIED';
+        verifiedStatus.className = 'status-badge status-verified';
+    } else {
+        verifiedStatus.textContent = 'UNVERIFIED';
+        verifiedStatus.className = 'status-badge status-unverified';
+    }
+    
+    // Show certificate viewer
+    document.getElementById('certificateViewer').classList.remove('d-none');
+    
+    // Scroll to certificate
+    document.getElementById('certificateViewer').scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+    });
+}
+
+function hideAllViews() {
+    document.getElementById('defaultView').style.display = 'none';
+    document.getElementById('searchProgress').style.display = 'none';
+    document.getElementById('certificateViewer').classList.add('d-none');
+    document.getElementById('notFoundView').classList.add('d-none');
+}
+
+function clearSearch() {
+    // Clear form
+    document.getElementById('searchForm').reset();
+    
+    // Hide all views and show default
+    hideAllViews();
+    document.getElementById('defaultView').style.display = 'block';
+    
+    // Clear any messages
+    document.getElementById('system-messages').innerHTML = '';
+}
+
+function showMessage(message, type) {
+    const messageContainer = document.getElementById('system-messages');
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        <i class="bi ${type === 'success' ? 'bi-check-circle' : type === 'warning' ? 'bi-exclamation-triangle' : 'bi-exclamation-circle'} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    messageContainer.appendChild(alertDiv);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+function printCertificate() {
+    const certificateViewer = document.getElementById('certificateViewer');
+    const printWindow = window.open('', '_blank');
+    
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Birth Certificate - Print</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .certificate-viewer { 
+                    background: white; 
+                    border: 2px solid #000;
+                    padding: 30px;
+                    max-width: 800px;
+                    margin: 0 auto;
+                }
+                .certificate-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 20px; }
+                .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+                .info-label { font-weight: bold; }
+                h3, h5 { color: #000; }
+                .status-badge { padding: 4px 8px; border: 1px solid #000; }
+                @media print {
+                    body { margin: 0; }
+                    .certificate-viewer { border: none; box-shadow: none; }
+                }
+            </style>
+        </head>
+        <body>
+            ${certificateViewer.innerHTML}
+        </body>
+        </html>
+    `);
+    
+    printWindow.document.close();
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 250);
+}
+
+function downloadCertificate() {
+    showMessage('PDF download functionality will be implemented', 'info');
+}
+
+function updateStatus() {
+    showMessage('Status update functionality will be implemented', 'info');
+}
+
+// Utility function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Auto-uppercase inputs
+document.getElementById('certificateNumber').addEventListener('input', function() {
+    this.value = this.value.toUpperCase();
+});
+
+document.getElementById('serialNumber').addEventListener('input', function() {
+    this.value = this.value.toUpperCase();
+});
+</script>
+{% endblock %}
