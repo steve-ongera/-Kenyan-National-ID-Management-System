@@ -1698,3 +1698,200 @@ def ajax_villages(request):
     sub_location_id = request.GET.get('sub_location_id')
     villages = Village.objects.filter(sub_location_id=sub_location_id).values('id', 'name')
     return JsonResponse({'villages': list(villages)})
+
+
+
+# views.py
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
+from django.utils import timezone
+from django.db.models import Q
+from .models import BirthCertificate, County, SubCounty, Division, Location, SubLocation, Village
+import time
+import json
+
+
+@staff_member_required
+def birth_certificate_verify(request):
+    """Main birth certificate verification page"""
+    context = {
+        'page_title': 'Birth Certificate Verification',
+        'breadcrumbs': [
+            {'name': 'Home', 'url': '/'},
+            {'name': 'Birth Certificates', 'url': '/certificates/'},
+            {'name': 'Verify Certificate', 'url': None}
+        ]
+    }
+    return render(request, 'certificates/verify_certificate.html', context)
+
+
+@csrf_exempt
+@staff_member_required
+def birth_certificate_search(request):
+    """AJAX endpoint to search for birth certificate"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        certificate_number = data.get('certificate_number', '').strip()
+        serial_number = data.get('serial_number', '').strip()
+        
+        # Simulate search delay with progress updates
+        time.sleep(0.5)  # Simulate processing time
+        
+        if not certificate_number and not serial_number:
+            return JsonResponse({
+                'success': False,
+                'error': 'Please provide at least one search parameter'
+            })
+        
+        # Build search query
+        query = Q()
+        if certificate_number:
+            query &= Q(certificate_number__iexact=certificate_number)
+        if serial_number:
+            query &= Q(serial_number__iexact=serial_number)
+        
+        # Search for certificate
+        try:
+            certificate = BirthCertificate.objects.select_related(
+                'county_of_birth',
+                'sub_county_of_birth', 
+                'division_of_birth',
+                'location_of_birth',
+                'sub_location_of_birth',
+                'village_of_birth'
+            ).get(query)
+            
+            # Calculate age
+            age = timezone.now().date().year - certificate.date_of_birth.year
+            if (timezone.now().date().month, timezone.now().date().day) < (certificate.date_of_birth.month, certificate.date_of_birth.day):
+                age -= 1
+            
+            certificate_data = {
+                'success': True,
+                'found': True,
+                'certificate': {
+                    'certificate_number': certificate.certificate_number,
+                    'serial_number': certificate.serial_number,
+                    'full_name': certificate.full_name,
+                    'date_of_birth': certificate.date_of_birth.strftime('%d/%m/%Y'),
+                    'age': age,
+                    'place_of_birth': certificate.place_of_birth,
+                    'gender': certificate.get_gender_display(),
+                    'gender_code': certificate.gender,
+                    
+                    # Location hierarchy
+                    'county_of_birth': certificate.county_of_birth.name,
+                    'sub_county_of_birth': certificate.sub_county_of_birth.name,
+                    'division_of_birth': certificate.division_of_birth.name,
+                    'location_of_birth': certificate.location_of_birth.name,
+                    'sub_location_of_birth': certificate.sub_location_of_birth.name,
+                    'village_of_birth': certificate.village_of_birth.name,
+                    
+                    # Family information
+                    'father_name': certificate.father_name or 'NOT INDICATED',
+                    'father_id': certificate.father_id or 'NOT INDICATED',
+                    'father_nationality': certificate.father_nationality,
+                    'mother_name': certificate.mother_name or 'NOT INDICATED', 
+                    'mother_id': certificate.mother_id or 'NOT INDICATED',
+                    'mother_nationality': certificate.mother_nationality,
+                    'guardian_name': certificate.guardian_name or 'N/A',
+                    'guardian_id': certificate.guardian_id or 'N/A',
+                    'guardian_relationship': certificate.guardian_relationship or 'N/A',
+                    
+                    # Registration details
+                    'registration_date': certificate.registration_date.strftime('%d/%m/%Y'),
+                    'issuing_office': certificate.issuing_office,
+                    'registrar_name': certificate.registrar_name,
+                    
+                    # Status information
+                    'is_active': certificate.is_active,
+                    'is_verified': certificate.is_verified,
+                    'is_kenyan_born': certificate.is_kenyan_born,
+                    'naturalization_cert': certificate.naturalization_cert or 'N/A',
+                    'citizenship_acquired_date': certificate.citizenship_acquired_date.strftime('%d/%m/%Y') if certificate.citizenship_acquired_date else 'N/A',
+                    
+                    # System dates
+                    'created_at': certificate.created_at.strftime('%d/%m/%Y %H:%M'),
+                    'updated_at': certificate.updated_at.strftime('%d/%m/%Y %H:%M'),
+                }
+            }
+            
+            return JsonResponse(certificate_data)
+            
+        except BirthCertificate.DoesNotExist:
+            return JsonResponse({
+                'success': True,
+                'found': False,
+                'message': 'No birth certificate found with the provided details'
+            })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'An error occurred: {str(e)}'
+        })
+
+
+@staff_member_required
+def birth_certificate_verify_status(request, certificate_number):
+    """Update verification status of a birth certificate"""
+    if request.method == 'POST':
+        try:
+            certificate = get_object_or_404(BirthCertificate, certificate_number=certificate_number)
+            action = request.POST.get('action')
+            
+            if action == 'verify':
+                certificate.is_verified = True
+            elif action == 'unverify':
+                certificate.is_verified = False
+            elif action == 'deactivate':
+                certificate.is_active = False
+            elif action == 'activate':
+                certificate.is_active = True
+            
+            certificate.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Certificate {action}d successfully',
+                'new_status': {
+                    'is_verified': certificate.is_verified,
+                    'is_active': certificate.is_active
+                }
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+@staff_member_required 
+def birth_certificate_verification_log(request):
+    """View verification history and logs"""
+    # This would typically involve a separate model to track verification history
+    # For now, just return recent certificates
+    recent_certificates = BirthCertificate.objects.select_related(
+        'county_of_birth'
+    ).order_by('-updated_at')[:50]
+    
+    context = {
+        'recent_certificates': recent_certificates,
+        'page_title': 'Verification Log'
+    }
+    
+    return render(request, 'certificates/verification_log.html', context)
