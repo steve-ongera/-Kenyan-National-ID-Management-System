@@ -2083,3 +2083,421 @@ def waiting_card_delete(request, serial_number):
     }
     
     return render(request, 'waiting_cards/waiting_card_delete.html', context)
+
+
+# views.py
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib import messages
+from django.http import JsonResponse, HttpResponse
+from django.core.paginator import Paginator
+from django.db.models import Q
+from django.utils import timezone
+from django.template.loader import render_to_string
+from django.conf import settings
+from .models import (
+    IDApplication, ApplicationStatusHistory, Notification, 
+    CustomUser, Fee, Payment, DocumentType, ApplicationDocument
+)
+from .forms import NameChangeApprovalForm, NameChangeRejectionForm
+import json
+
+
+def is_admin_user(user):
+    """Check if user is admin or DO officer"""
+    return user.is_authenticated and user.user_type in ['admin', 'do_officer']
+
+
+@login_required
+@user_passes_test(is_admin_user)
+def name_change_requests_list(request):
+    """List all name change requests for admin review"""
+    
+    # Filter name change applications
+    applications = IDApplication.objects.filter(
+        application_type='name_change'
+    ).select_related(
+        'applicant', 'birth_certificate', 'chief_office', 
+        'do_office', 'current_county', 'current_sub_county'
+    ).order_by('-created_at')
+    
+    # Filter by status if provided
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        applications = applications.filter(status=status_filter)
+    
+    # Search functionality
+    search_query = request.GET.get('search', '')
+    if search_query:
+        applications = applications.filter(
+            Q(full_name__icontains=search_query) |
+            Q(application_number__icontains=search_query) |
+            Q(old_name__icontains=search_query) |
+            Q(new_name__icontains=search_query) |
+            Q(applicant__national_id__icontains=search_query)
+        )
+    
+    # Pagination
+    paginator = Paginator(applications, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Status choices for filter dropdown
+    status_choices = IDApplication.APPLICATION_STATUS
+    
+    context = {
+        'page_obj': page_obj,
+        'status_choices': status_choices,
+        'current_status': status_filter,
+        'search_query': search_query,
+        'total_applications': applications.count(),
+    }
+    
+    return render(request, 'admin/name_change_requests.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_user)
+def name_change_request_detail(request, application_id):
+    """Detailed view of a specific name change request"""
+    
+    application = get_object_or_404(
+        IDApplication.objects.select_related(
+            'applicant', 'birth_certificate', 'chief_office', 'chief',
+            'do_office', 'do_officer', 'current_county', 'current_sub_county'
+        ), 
+        application_id=application_id,
+        application_type='name_change'
+    )
+    
+    # Get application documents
+    app_documents = ApplicationDocument.objects.filter(
+        application=application
+    ).select_related('document_type', 'document')
+    
+    # Get status history
+    status_history = ApplicationStatusHistory.objects.filter(
+        application=application
+    ).select_related('changed_by').order_by('-timestamp')
+    
+    # Get required documents for name change
+    required_docs = DocumentType.objects.filter(is_required_for_name_change=True)
+    
+    # Check if all required documents are provided and verified
+    missing_docs = []
+    unverified_docs = []
+    
+    for doc_type in required_docs:
+        app_doc = app_documents.filter(document_type=doc_type).first()
+        if not app_doc or not app_doc.is_provided:
+            missing_docs.append(doc_type)
+        elif not app_doc.is_verified:
+            unverified_docs.append(doc_type)
+    
+    # Get fees and payments
+    name_change_fee = Fee.objects.filter(fee_type='name_change', is_active=True).first()
+    payments = Payment.objects.filter(application=application).order_by('-created_at')
+    
+    # Check if fee is paid
+    fee_paid = payments.filter(status='completed').exists()
+    
+    context = {
+        'application': application,
+        'app_documents': app_documents,
+        'status_history': status_history,
+        'required_docs': required_docs,
+        'missing_docs': missing_docs,
+        'unverified_docs': unverified_docs,
+        'name_change_fee': name_change_fee,
+        'payments': payments,
+        'fee_paid': fee_paid,
+        'can_approve': (
+            application.status in ['do_review', 'chief_approved'] and 
+            not missing_docs and not unverified_docs and fee_paid
+        ),
+        'can_reject': application.status in ['do_review', 'chief_approved'],
+    }
+    
+    return render(request, 'admin/name_change_request_detail.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_user)
+def approve_name_change(request, application_id):
+    """Approve a name change request"""
+    
+    if request.method != 'POST':
+        messages.error(request, 'Invalid request method.')
+        return redirect('name_change_request_detail', application_id=application_id)
+    
+    application = get_object_or_404(
+        IDApplication, 
+        application_id=application_id,
+        application_type='name_change'
+    )
+    
+    # Validate that application can be approved
+    if application.status not in ['do_review', 'chief_approved']:
+        messages.error(request, 'Application cannot be approved at this stage.')
+        return redirect('name_change_request_detail', application_id=application_id)
+    
+    # Check if all requirements are met
+    app_documents = ApplicationDocument.objects.filter(application=application)
+    required_docs = DocumentType.objects.filter(is_required_for_name_change=True)
+    
+    missing_docs = []
+    unverified_docs = []
+    
+    for doc_type in required_docs:
+        app_doc = app_documents.filter(document_type=doc_type).first()
+        if not app_doc or not app_doc.is_provided:
+            missing_docs.append(doc_type.name)
+        elif not app_doc.is_verified:
+            unverified_docs.append(doc_type.name)
+    
+    if missing_docs or unverified_docs:
+        error_msg = "Cannot approve application. "
+        if missing_docs:
+            error_msg += f"Missing documents: {', '.join(missing_docs)}. "
+        if unverified_docs:
+            error_msg += f"Unverified documents: {', '.join(unverified_docs)}."
+        messages.error(request, error_msg)
+        return redirect('name_change_request_detail', application_id=application_id)
+    
+    # Check if fee is paid
+    fee_paid = Payment.objects.filter(
+        application=application, 
+        status='completed'
+    ).exists()
+    
+    if not fee_paid:
+        messages.error(request, 'Name change fee must be paid before approval.')
+        return redirect('name_change_request_detail', application_id=application_id)
+    
+    try:
+        # Get approval notes
+        approval_notes = request.POST.get('approval_notes', '')
+        
+        # Update application status
+        old_status = application.status
+        application.status = 'do_approved'
+        application.approved_at = timezone.now()
+        application.do_officer = request.user.doofficer if hasattr(request.user, 'doofficer') else None
+        application.save()
+        
+        # Create status history
+        ApplicationStatusHistory.objects.create(
+            application=application,
+            previous_status=old_status,
+            new_status='do_approved',
+            changed_by=request.user,
+            change_reason='Name change request approved by DO',
+            notes=approval_notes,
+            location_type='do_office'
+        )
+        
+        # Create notification for applicant
+        if application.applicant.phone_number:
+            notification_message = (
+                f"Your name change request {application.application_number} has been approved. "
+                f"Your new name '{application.new_name}' will be updated in your National ID. "
+                f"You will be notified when your new ID is ready for collection."
+            )
+            
+            Notification.objects.create(
+                application=application,
+                recipient=application.applicant,
+                notification_type='sms',
+                recipient_contact=application.applicant.phone_number,
+                subject='Name Change Approved',
+                message=notification_message
+            )
+        
+        messages.success(
+            request, 
+            f'Name change request for {application.full_name} has been successfully approved.'
+        )
+        
+        # Log the action
+        print(f"Name change approved by {request.user.username} for application {application.application_number}")
+        
+    except Exception as e:
+        messages.error(request, f'Error approving name change request: {str(e)}')
+    
+    return redirect('name_change_request_detail', application_id=application_id)
+
+
+@login_required
+@user_passes_test(is_admin_user)
+def reject_name_change(request, application_id):
+    """Reject a name change request"""
+    
+    if request.method != 'POST':
+        messages.error(request, 'Invalid request method.')
+        return redirect('name_change_request_detail', application_id=application_id)
+    
+    application = get_object_or_404(
+        IDApplication, 
+        application_id=application_id,
+        application_type='name_change'
+    )
+    
+    # Validate that application can be rejected
+    if application.status not in ['do_review', 'chief_approved']:
+        messages.error(request, 'Application cannot be rejected at this stage.')
+        return redirect('name_change_request_detail', application_id=application_id)
+    
+    try:
+        # Get rejection reason
+        rejection_reason = request.POST.get('rejection_reason', '')
+        rejection_notes = request.POST.get('rejection_notes', '')
+        
+        if not rejection_reason:
+            messages.error(request, 'Rejection reason is required.')
+            return redirect('name_change_request_detail', application_id=application_id)
+        
+        # Update application status
+        old_status = application.status
+        application.status = 'do_rejected'
+        application.save()
+        
+        # Create status history
+        ApplicationStatusHistory.objects.create(
+            application=application,
+            previous_status=old_status,
+            new_status='do_rejected',
+            changed_by=request.user,
+            change_reason=f'Name change request rejected: {rejection_reason}',
+            notes=rejection_notes,
+            location_type='do_office'
+        )
+        
+        # Create notification for applicant
+        if application.applicant.phone_number:
+            notification_message = (
+                f"Your name change request {application.application_number} has been rejected. "
+                f"Reason: {rejection_reason}. "
+                f"Please contact the DO office for more information."
+            )
+            
+            Notification.objects.create(
+                application=application,
+                recipient=application.applicant,
+                notification_type='sms',
+                recipient_contact=application.applicant.phone_number,
+                subject='Name Change Rejected',
+                message=notification_message
+            )
+        
+        messages.success(
+            request, 
+            f'Name change request for {application.full_name} has been rejected.'
+        )
+        
+        # Log the action
+        print(f"Name change rejected by {request.user.username} for application {application.application_number}: {rejection_reason}")
+        
+    except Exception as e:
+        messages.error(request, f'Error rejecting name change request: {str(e)}')
+    
+    return redirect('name_change_request_detail', application_id=application_id)
+
+
+@login_required
+@user_passes_test(is_admin_user)
+def verify_document(request, application_id, document_id):
+    """Verify or unverify a document"""
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request method'})
+    
+    try:
+        application = get_object_or_404(IDApplication, application_id=application_id)
+        app_document = get_object_or_404(
+            ApplicationDocument, 
+            application=application, 
+            id=document_id
+        )
+        
+        action = request.POST.get('action')  # 'verify' or 'unverify'
+        notes = request.POST.get('notes', '')
+        
+        if action == 'verify':
+            app_document.is_verified = True
+            app_document.document.is_verified = True
+            app_document.document.verified_by = request.user
+            app_document.document.verified_at = timezone.now()
+            app_document.document.verification_notes = notes
+            
+        elif action == 'unverify':
+            app_document.is_verified = False
+            app_document.document.is_verified = False
+            app_document.document.verified_by = None
+            app_document.document.verified_at = None
+            app_document.document.verification_notes = notes
+        
+        app_document.notes = notes
+        app_document.save()
+        app_document.document.save()
+        
+        return JsonResponse({
+            'success': True,
+            'verified': app_document.is_verified,
+            'message': f'Document {action}d successfully'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@user_passes_test(is_admin_user)
+def name_change_statistics(request):
+    """View statistics for name change requests"""
+    
+    # Get statistics
+    total_requests = IDApplication.objects.filter(application_type='name_change').count()
+    
+    pending_requests = IDApplication.objects.filter(
+        application_type='name_change',
+        status__in=['started', 'documents_uploaded', 'chief_review', 'do_review']
+    ).count()
+    
+    approved_requests = IDApplication.objects.filter(
+        application_type='name_change',
+        status='do_approved'
+    ).count()
+    
+    rejected_requests = IDApplication.objects.filter(
+        application_type='name_change',
+        status__in=['chief_rejected', 'do_rejected']
+    ).count()
+    
+    # Recent requests (last 30 days)
+    from datetime import timedelta
+    recent_date = timezone.now() - timedelta(days=30)
+    recent_requests = IDApplication.objects.filter(
+        application_type='name_change',
+        created_at__gte=recent_date
+    ).count()
+    
+    # Status breakdown
+    status_breakdown = {}
+    for status_code, status_name in IDApplication.APPLICATION_STATUS:
+        count = IDApplication.objects.filter(
+            application_type='name_change',
+            status=status_code
+        ).count()
+        if count > 0:
+            status_breakdown[status_name] = count
+    
+    context = {
+        'total_requests': total_requests,
+        'pending_requests': pending_requests,
+        'approved_requests': approved_requests,
+        'rejected_requests': rejected_requests,
+        'recent_requests': recent_requests,
+        'status_breakdown': status_breakdown,
+    }
+    
+    return render(request, 'admin/name_change_statistics.html', context)
