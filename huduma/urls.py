@@ -92,10 +92,10 @@ urlpatterns = [
     path('waiting-cards/<str:serial_number>/delete/', views.waiting_card_delete, name='waiting_card_delete'),
 
     # Name Change Management URLs
-    path('admin/name-changes/', views.name_change_requests_list, name='name_change_requests_list'),
-    path('admin/name-changes/<uuid:application_id>/', views.name_change_request_detail, name='name_change_request_detail'),
-    path('admin/name-changes/<uuid:application_id>/approve/', views.approve_name_change, name='approve_name_change'),
-    path('admin/name-changes/<uuid:application_id>/reject/', views.reject_name_change,name='reject_name_change'),
-    path('admin/name-changes/<uuid:application_id>/verify-document/<int:document_id>/', views.verify_document,name='verify_document'),
-    path('admin/name-changes/statistics/', views.name_change_statistics, name='name_change_statistics'),
+    path('admin-name-changes/', views.name_change_requests_list, name='name_change_requests_list'),
+    path('admin-name-changes/<uuid:application_id>/', views.name_change_request_detail, name='name_change_request_detail'),
+    path('admin-name-changes/<uuid:application_id>/approve/', views.approve_name_change, name='approve_name_change'),
+    path('admin-name-changes/<uuid:application_id>/reject/', views.reject_name_change,name='reject_name_change'),
+    path('admin-name-changes/<uuid:application_id>/verify-document/<int:document_id>/', views.verify_document,name='verify_document'),
+    path('admin-name-changes/statistics/', views.name_change_statistics, name='name_change_statistics'),
 ]
