@@ -383,3 +383,763 @@ class WaitingCardForm(forms.ModelForm):
             )
         
         return cleaned_data
+    
+# forms.py
+from django import forms
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from .models import (
+    WaitingCard, IDApplication, County, SubCounty, DOOffice,
+    CustomUser, DocumentType, Document
+)
+
+
+class WaitingCardFilterForm(forms.Form):
+    """Form for filtering waiting cards in the list view"""
+    
+    COLLECTION_STATUS_CHOICES = [
+        ('', 'All'),
+        ('collected', 'Collected'),
+        ('pending', 'Pending Collection'),
+    ]
+    
+    ACTIVE_STATUS_CHOICES = [
+        ('', 'All Status'),
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+    ]
+    
+    search = forms.CharField(
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Serial number, applicant name, application number...',
+            'id': 'search'
+        })
+    )
+    
+    collection_location = forms.ModelChoiceField(
+        queryset=DOOffice.objects.filter(is_active=True).order_by('name'),
+        required=False,
+        empty_label="All Locations",
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'collection_location'
+        })
+    )
+    
+    county = forms.ModelChoiceField(
+        queryset=County.objects.all().order_by('name'),
+        required=False,
+        empty_label="All Counties",
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'county'
+        })
+    )
+    
+    sub_county = forms.ModelChoiceField(
+        queryset=SubCounty.objects.none(),  # Will be populated via AJAX
+        required=False,
+        empty_label="All Sub Counties",
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'sub_county'
+        })
+    )
+    
+    is_active = forms.ChoiceField(
+        choices=ACTIVE_STATUS_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'is_active'
+        })
+    )
+    
+    is_collected = forms.ChoiceField(
+        choices=COLLECTION_STATUS_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'is_collected'
+        })
+    )
+    
+    date_from = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date',
+            'id': 'date_from'
+        })
+    )
+    
+    date_to = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date',
+            'id': 'date_to'
+        })
+    )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Populate sub_county choices based on county if provided
+        if 'data' in kwargs and kwargs['data'].get('county'):
+            try:
+                county_id = int(kwargs['data']['county'])
+                self.fields['sub_county'].queryset = SubCounty.objects.filter(
+                    county_id=county_id
+                ).order_by('name')
+            except (ValueError, TypeError):
+                pass
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        date_from = cleaned_data.get('date_from')
+        date_to = cleaned_data.get('date_to')
+        
+        if date_from and date_to:
+            if date_from > date_to:
+                raise ValidationError("Start date cannot be later than end date.")
+            
+            # Check if date range is too wide (optional validation)
+            if (date_to - date_from).days > 365:
+                raise ValidationError("Date range cannot exceed 365 days.")
+        
+        return cleaned_data
+
+
+class WaitingCardUpdateForm(forms.ModelForm):
+    """Form for updating waiting card details"""
+    
+    class Meta:
+        model = WaitingCard
+        fields = [
+            'expected_collection_date',
+            'collection_location',
+            'collection_instructions',
+            'is_active'
+        ]
+        widgets = {
+            'expected_collection_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'collection_location': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'collection_instructions': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Enter collection instructions for the applicant...'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            })
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Filter collection locations to only active DO offices
+        self.fields['collection_location'].queryset = DOOffice.objects.filter(
+            is_active=True
+        ).order_by('name')
+        
+        # Set default collection date to 14 days from now if creating new
+        if not self.instance.pk:
+            self.fields['expected_collection_date'].initial = (
+                timezone.now().date() + timezone.timedelta(days=14)
+            )
+    
+    def clean_expected_collection_date(self):
+        collection_date = self.cleaned_data.get('expected_collection_date')
+        
+        if collection_date:
+            # Collection date should not be in the past
+            if collection_date < timezone.now().date():
+                raise ValidationError("Collection date cannot be in the past.")
+            
+            # Collection date should not be too far in the future (e.g., max 90 days)
+            max_future_date = timezone.now().date() + timezone.timedelta(days=90)
+            if collection_date > max_future_date:
+                raise ValidationError("Collection date cannot be more than 90 days in the future.")
+        
+        return collection_date
+
+
+class WaitingCardCreateForm(forms.ModelForm):
+    """Form for creating a new waiting card"""
+    
+    application = forms.ModelChoiceField(
+        queryset=IDApplication.objects.filter(
+            status='biometrics_taken',
+            waiting_card__isnull=True  # Applications without waiting cards
+        ).select_related('applicant'),
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        }),
+        empty_label="Select Application"
+    )
+    
+    class Meta:
+        model = WaitingCard
+        fields = [
+            'application',
+            'expected_collection_date',
+            'collection_location',
+            'collection_instructions'
+        ]
+        widgets = {
+            'expected_collection_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'collection_location': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'collection_instructions': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Enter collection instructions for the applicant...'
+            })
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Filter collection locations to only active DO offices
+        self.fields['collection_location'].queryset = DOOffice.objects.filter(
+            is_active=True
+        ).order_by('name')
+        
+        # Set default collection date
+        self.fields['expected_collection_date'].initial = (
+            timezone.now().date() + timezone.timedelta(days=14)
+        )
+        
+        # Set default collection instructions
+        self.fields['collection_instructions'].initial = (
+            "Please bring this waiting card and a copy of your National ID application "
+            "receipt when collecting your ID. Collection hours: Monday-Friday 8:00AM-5:00PM."
+        )
+    
+    def clean_application(self):
+        application = self.cleaned_data.get('application')
+        
+        if application:
+            # Check if application already has a waiting card
+            if hasattr(application, 'waiting_card'):
+                raise ValidationError("This application already has a waiting card.")
+            
+            # Check if application status is appropriate
+            if application.status != 'biometrics_taken':
+                raise ValidationError(
+                    "Waiting card can only be created for applications with 'biometrics_taken' status."
+                )
+            
+            # Check if biometric data exists
+            if not hasattr(application, 'biometric_data'):
+                raise ValidationError(
+                    "Application must have biometric data before creating waiting card."
+                )
+        
+        return application
+
+
+class WaitingCardCollectionForm(forms.Form):
+    """Form for marking a waiting card as collected"""
+    
+    collector_name = forms.CharField(
+        max_length=200,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Full name of person collecting the ID'
+        }),
+        help_text="Enter the full name of the person collecting the ID"
+    )
+    
+    collector_id = forms.CharField(
+        max_length=20,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'National ID number of collector'
+        }),
+        help_text="Enter the National ID number of the person collecting"
+    )
+    
+    relationship_to_applicant = forms.CharField(
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'e.g., Self, Parent, Guardian, Spouse'
+        }),
+        help_text="Relationship to the applicant (if not collecting personally)"
+    )
+    
+    authorization_document = forms.FileField(
+        required=False,
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': '.pdf,.jpg,.jpeg,.png'
+        }),
+        help_text="Upload authorization letter if collected by someone else"
+    )
+    
+    collection_notes = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Any additional notes about the collection...'
+        }),
+        required=False,
+        help_text="Optional notes about the collection process"
+    )
+    
+    confirm_collection = forms.BooleanField(
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        }),
+        label="I confirm that the waiting card has been collected and the applicant has been informed about ID collection procedures."
+    )
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        collector_name = cleaned_data.get('collector_name')
+        relationship = cleaned_data.get('relationship_to_applicant')
+        authorization_doc = cleaned_data.get('authorization_document')
+        
+        # If relationship indicates someone else is collecting, require authorization
+        if relationship and relationship.lower() not in ['self', '']:
+            if not authorization_doc:
+                raise ValidationError(
+                    "Authorization document is required when ID is collected by someone other than the applicant."
+                )
+        
+        return cleaned_data
+
+
+class WaitingCardSearchForm(forms.Form):
+    """Quick search form for waiting cards"""
+    
+    SEARCH_TYPE_CHOICES = [
+        ('serial', 'Serial Number'),
+        ('application', 'Application Number'),
+        ('applicant', 'Applicant Name'),
+        ('phone', 'Phone Number'),
+    ]
+    
+    search_type = forms.ChoiceField(
+        choices=SEARCH_TYPE_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
+    
+    search_value = forms.CharField(
+        max_length=200,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter search value...'
+        })
+    )
+    
+    def clean_search_value(self):
+        search_value = self.cleaned_data.get('search_value')
+        search_type = self.cleaned_data.get('search_type')
+        
+        if search_value:
+            search_value = search_value.strip()
+            
+            # Validate based on search type
+            if search_type == 'serial' and len(search_value) < 3:
+                raise ValidationError("Serial number must be at least 3 characters.")
+            
+            if search_type == 'phone':
+                # Basic phone validation
+                if not search_value.replace('+', '').replace('-', '').replace(' ', '').isdigit():
+                    raise ValidationError("Please enter a valid phone number.")
+        
+        return search_value
+
+
+class WaitingCardBulkActionForm(forms.Form):
+    """Form for bulk actions on waiting cards"""
+    
+    BULK_ACTIONS = [
+        ('', 'Select Action'),
+        ('mark_collected', 'Mark as Collected'),
+        ('mark_active', 'Mark as Active'),
+        ('mark_inactive', 'Mark as Inactive'),
+        ('update_collection_date', 'Update Collection Date'),
+        ('export_selected', 'Export Selected'),
+    ]
+    
+    action = forms.ChoiceField(
+        choices=BULK_ACTIONS,
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
+    
+    selected_cards = forms.CharField(
+        widget=forms.HiddenInput(),
+        required=False
+    )
+    
+    # Additional fields for specific actions
+    new_collection_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        }),
+        help_text="New collection date (for update collection date action)"
+    )
+    
+    bulk_notes = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Notes for this bulk action...'
+        }),
+        required=False,
+        help_text="Optional notes explaining the bulk action"
+    )
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        action = cleaned_data.get('action')
+        selected_cards = cleaned_data.get('selected_cards')
+        new_collection_date = cleaned_data.get('new_collection_date')
+        
+        if action and not selected_cards:
+            raise ValidationError("Please select at least one waiting card.")
+        
+        if action == 'update_collection_date' and not new_collection_date:
+            raise ValidationError("New collection date is required for this action.")
+        
+        if new_collection_date and new_collection_date < timezone.now().date():
+            raise ValidationError("New collection date cannot be in the past.")
+        
+        return cleaned_data
+
+
+class WaitingCardReportForm(forms.Form):
+    """Form for generating waiting card reports"""
+    
+    REPORT_TYPES = [
+        ('summary', 'Summary Report'),
+        ('detailed', 'Detailed Report'),
+        ('collection_due', 'Collection Due Report'),
+        ('overdue', 'Overdue Collection Report'),
+        ('county_breakdown', 'County Breakdown Report'),
+    ]
+    
+    EXPORT_FORMATS = [
+        ('pdf', 'PDF'),
+        ('excel', 'Excel'),
+        ('csv', 'CSV'),
+    ]
+    
+    report_type = forms.ChoiceField(
+        choices=REPORT_TYPES,
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
+    
+    export_format = forms.ChoiceField(
+        choices=EXPORT_FORMATS,
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
+    
+    date_from = forms.DateField(
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        }),
+        help_text="Report period start date"
+    )
+    
+    date_to = forms.DateField(
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        }),
+        help_text="Report period end date"
+    )
+    
+    county_filter = forms.ModelChoiceField(
+        queryset=County.objects.all().order_by('name'),
+        required=False,
+        empty_label="All Counties",
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
+    
+    collection_location_filter = forms.ModelChoiceField(
+        queryset=DOOffice.objects.filter(is_active=True).order_by('name'),
+        required=False,
+        empty_label="All Collection Locations",
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
+    
+    include_collected = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        }),
+        label="Include already collected cards"
+    )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Set default date range (last 30 days)
+        today = timezone.now().date()
+        self.fields['date_to'].initial = today
+        self.fields['date_from'].initial = today - timezone.timedelta(days=30)
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        date_from = cleaned_data.get('date_from')
+        date_to = cleaned_data.get('date_to')
+        
+        if date_from and date_to:
+            if date_from > date_to:
+                raise ValidationError("Start date cannot be later than end date.")
+            
+            if date_to > timezone.now().date():
+                raise ValidationError("End date cannot be in the future.")
+        
+        return cleaned_data
+
+
+class WaitingCardVerificationForm(forms.Form):
+    """Form for verifying waiting card authenticity"""
+    
+    serial_number = forms.CharField(
+        max_length=50,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter waiting card serial number',
+            'style': 'text-transform: uppercase;'
+        }),
+        help_text="Enter the serial number printed on the waiting card"
+    )
+    
+    verification_code = forms.CharField(
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter verification code (optional)'
+        }),
+        help_text="Verification code from QR code scan (optional)"
+    )
+    
+    def clean_serial_number(self):
+        serial_number = self.cleaned_data.get('serial_number')
+        
+        if serial_number:
+            serial_number = serial_number.strip().upper()
+            
+            # Check if waiting card exists
+            try:
+                waiting_card = WaitingCard.objects.get(serial_number=serial_number)
+                self.waiting_card = waiting_card
+            except WaitingCard.DoesNotExist:
+                raise ValidationError("No waiting card found with this serial number.")
+        
+        return serial_number
+    
+    def get_waiting_card(self):
+        """Return the found waiting card after form validation"""
+        return getattr(self, 'waiting_card', None)
+
+
+class WaitingCardCollectionStatusForm(forms.Form):
+    """Form for updating collection status of multiple cards"""
+    
+    waiting_cards = forms.ModelMultipleChoiceField(
+        queryset=WaitingCard.objects.filter(is_collected=False),
+        widget=forms.CheckboxSelectMultiple(attrs={
+            'class': 'form-check-input'
+        })
+    )
+    
+    mark_as_collected = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        }),
+        label="Mark selected cards as collected"
+    )
+    
+    collection_notes = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Enter notes about the collection...'
+        }),
+        required=False,
+        help_text="Optional notes about the bulk collection"
+    )
+    
+    def __init__(self, *args, **kwargs):
+        collection_location = kwargs.pop('collection_location', None)
+        super().__init__(*args, **kwargs)
+        
+        # Filter waiting cards by collection location if provided
+        if collection_location:
+            self.fields['waiting_cards'].queryset = WaitingCard.objects.filter(
+                collection_location=collection_location,
+                is_collected=False
+            ).order_by('expected_collection_date')
+
+
+class NameChangeApprovalForm(forms.Form):
+    """Form for approving name change requests"""
+    
+    approval_notes = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 4,
+            'placeholder': 'Enter notes about the approval decision...'
+        }),
+        required=False,
+        help_text="Optional notes explaining the approval decision"
+    )
+    
+    confirm_approval = forms.BooleanField(
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        }),
+        label="I confirm that I have reviewed all documents and approve this name change request."
+    )
+    
+    notify_applicant = forms.BooleanField(
+        initial=True,
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        }),
+        label="Send notification to applicant"
+    )
+
+
+class NameChangeRejectionForm(forms.Form):
+    """Form for rejecting name change requests"""
+    
+    REJECTION_REASONS = [
+        ('insufficient_documentation', 'Insufficient Documentation'),
+        ('invalid_documents', 'Invalid or Fraudulent Documents'),
+        ('name_not_acceptable', 'Proposed Name Not Acceptable'),
+        ('duplicate_request', 'Duplicate Request'),
+        ('technical_error', 'Technical Error in Application'),
+        ('legal_issues', 'Legal Issues with Request'),
+        ('other', 'Other (specify in notes)'),
+    ]
+    
+    rejection_reason = forms.ChoiceField(
+        choices=REJECTION_REASONS,
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        }),
+        help_text="Select the primary reason for rejection"
+    )
+    
+    rejection_notes = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 4,
+            'placeholder': 'Provide detailed explanation for the rejection...'
+        }),
+        help_text="Detailed explanation that will be sent to the applicant"
+    )
+    
+    allow_resubmission = forms.BooleanField(
+        initial=True,
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        }),
+        label="Allow applicant to resubmit with corrections"
+    )
+    
+    notify_applicant = forms.BooleanField(
+        initial=True,
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        }),
+        label="Send notification to applicant"
+    )
+    
+    def clean_rejection_notes(self):
+        notes = self.cleaned_data.get('rejection_notes')
+        
+        if not notes or len(notes.strip()) < 10:
+            raise ValidationError("Please provide a detailed explanation for the rejection.")
+        
+        return notes.strip()
+
+
+class DocumentVerificationForm(forms.Form):
+    """Form for verifying documents attached to applications"""
+    
+    VERIFICATION_ACTIONS = [
+        ('verify', 'Verify Document'),
+        ('unverify', 'Mark as Unverified'),
+        ('request_resubmission', 'Request Resubmission'),
+    ]
+    
+    action = forms.ChoiceField(
+        choices=VERIFICATION_ACTIONS,
+        widget=forms.Select(attrs={
+            'class': 'form-select'
+        })
+    )
+    
+    verification_notes = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Enter verification notes...'
+        }),
+        required=False,
+        help_text="Notes about the document verification"
+    )
+    
+    quality_score = forms.IntegerField(
+        min_value=0,
+        max_value=100,
+        required=False,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': '0-100'
+        }),
+        help_text="Document quality score (0-100)"
+    )
+    
+    def clean_verification_notes(self):
+        action = self.cleaned_data.get('action')
+        notes = self.cleaned_data.get('verification_notes')
+        
+        # Require notes for certain actions
+        if action in ['unverify', 'request_resubmission'] and not notes:
+            raise ValidationError("Verification notes are required for this action.")
+        
+        return notes
